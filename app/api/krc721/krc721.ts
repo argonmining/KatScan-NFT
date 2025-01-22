@@ -95,17 +95,22 @@ type Operation = DeployOperation | MintOperation | TransferOperation;
 const DEFAULT_NETWORK: Network = (process.env.NEXT_PUBLIC_KRC721_NETWORK as Network) || 'testnet-10';
 
 export class KRC721Api {
-    private baseUrl!: string;
-    private network!: Network;
+    private network: Network;
+    private baseUrl: string;
 
     constructor(network: Network = DEFAULT_NETWORK) {
+        this.network = network;
+        // Initialize baseUrl with empty string
+        this.baseUrl = ''; // Will be set properly in setNetwork
         this.setNetwork(network);
     }
 
     setNetwork(network: Network) {
         this.network = network;
-        // Use our API proxy
-        this.baseUrl = '/api/krc721';
+        // Dynamically determine base URL without duplicating /api/krc721
+        this.baseUrl = typeof window !== 'undefined' 
+            ? window.location.origin  // Browser environment
+            : '';  // Server environment (will use relative path)
     }
 
     getNetwork(): Network {
@@ -114,7 +119,7 @@ export class KRC721Api {
 
     async getCollectionDetails(tick: string) {
         try {
-            const response = await ofetch(`${this.baseUrl}/nfts/${tick}`, {
+            const response = await ofetch(`${this.baseUrl}/api/krc721/nfts/${tick}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -130,7 +135,7 @@ export class KRC721Api {
 
     async getToken(tick: string, tokenId: string) {
         try {
-            const response = await ofetch(`${this.baseUrl}/nfts/${tick}/${tokenId}`, {
+            const response = await ofetch(`${this.baseUrl}/api/krc721/nfts/${tick}/${tokenId}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -163,7 +168,7 @@ export class KRC721Api {
 
     async getAddressNFTs(address: string, params?: { limit?: number; offset?: string }) {
         const queryParams = new URLSearchParams(params as Record<string, string>).toString();
-        const url = `${this.baseUrl}/address/${address}${queryParams ? `?${queryParams}` : ''}`;
+        const url = `${this.baseUrl}/api/krc721/address/${address}${queryParams ? `?${queryParams}` : ''}`;
         
         try {
             const data = await ofetch(url, {
@@ -183,7 +188,7 @@ export class KRC721Api {
 
     async getCollectionHolders(tick: string, params?: { limit?: number; offset?: string }) {
         const queryParams = new URLSearchParams(params as Record<string, string>).toString();
-        const url = `${this.baseUrl}/nfts/${tick}/holders${queryParams ? `?${queryParams}` : ''}`;
+        const url = `${this.baseUrl}/api/krc721/nfts/${tick}/holders${queryParams ? `?${queryParams}` : ''}`;
         
         try {
             const response = await fetch(url, {
@@ -212,7 +217,7 @@ export class KRC721Api {
         try {
             const promises = Array.from({ length: limit }, (_, i) => {
                 const id = (startId + i).toString();
-                const url = `${this.baseUrl}/nfts/${tick}/token/${id}`;
+                const url = `${this.baseUrl}/api/krc721/nfts/${tick}/token/${id}`;
                 console.log('Fetching NFT:', url);
                 
                 return ofetch(url, {

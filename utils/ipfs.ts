@@ -57,41 +57,6 @@ function getIPFSHash(uri: string): string {
     return uri.replace('ipfs://', '');
 }
 
-// Helper function to get file extension from URI or default to checking content type
-async function getFileExtension(uri: string, hash: string): Promise<string> {
-    // If URI has extension, use it
-    const extensionMatch = uri.match(/\.[^.]+$/);
-    if (extensionMatch) return extensionMatch[0];
-
-    // Try to detect extension from content type
-    try {
-        const response = await fetch(`${PRIMARY_GATEWAY}/ipfs/${hash}`, {
-            method: 'HEAD',
-        });
-        const contentType = response.headers.get('content-type');
-        if (contentType) {
-            switch (contentType.toLowerCase()) {
-                case 'image/jpeg':
-                    return '.jpg';
-                case 'image/png':
-                    return '.png';
-                case 'image/gif':
-                    return '.gif';
-                case 'image/webp':
-                    return '.webp';
-                case 'image/svg+xml':
-                    return '.svg';
-                default:
-                    return '.png'; // Default to .png if unknown image type
-            }
-        }
-    } catch (error) {
-        console.error('Error detecting file type:', error);
-    }
-
-    return '.png'; // Default extension if detection fails
-}
-
 export async function getIPFSContent(uri: string) {
     if (!uri) return null;
 
@@ -101,39 +66,27 @@ export async function getIPFSContent(uri: string) {
 
     try {
         const hash = getIPFSHash(uri);
-
-        // If it's an image (has image extension or is a single file), try to detect type
-        if (hasImageExtension(uri) || !uri.includes('.')) {
-            const extension = await getFileExtension(uri, hash);
-            const imageUrl = `${PRIMARY_GATEWAY}/ipfs/${hash}${extension}`;
-            return { imageUrl };
+        
+        // Use our API proxy to fetch IPFS content
+        const response = await fetch(`/api/ipfs/${hash}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch IPFS content: ${response.status}`);
         }
 
-        // For metadata JSON files, try each gateway
-        for (const gateway of [PRIMARY_GATEWAY, ...FALLBACK_GATEWAYS]) {
-            try {
-                const response = await fetchWithTimeout(`${gateway}/ipfs/${hash}`);
-                if (!response.ok) continue;
-
-                const data = await response.json();
-                
-                // If the data has an image field that's an IPFS URI, process it
-                if (data.image && data.image.startsWith('ipfs://')) {
-                    const imageHash = getIPFSHash(data.image);
-                    // Check content type for image field
-                    const extension = await getFileExtension(data.image, imageHash);
-                    data.imageUrl = `${PRIMARY_GATEWAY}/ipfs/${imageHash}${extension}`;
-                }
-
-                // Cache the result
-                ipfsCache.set(uri, data);
-                return data;
-            } catch (error) {
-                console.error(`Failed to fetch from ${gateway}:`, error);
-                continue;
-            }
+        const data = await response.json();
+        
+        // If the data has an image field that's an IPFS URI, process it
+        if (data.image && data.image.startsWith('ipfs://')) {
+            const imageHash = getIPFSHash(data.image);
+            // Don't append .png if the image already has an extension
+            data.imageUrl = hasImageExtension(data.image) 
+                ? `/api/ipfs/${imageHash}`
+                : `/api/ipfs/${imageHash}.png`;
         }
-        throw new Error('Failed to fetch from all gateways');
+
+        // Cache the result
+        ipfsCache.set(uri, data);
+        return data;
     } catch (error) {
         console.error('Error fetching IPFS content:', error);
         return null;

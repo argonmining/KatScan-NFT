@@ -13,9 +13,9 @@ export interface NFTMetadata {
 export interface NFTDisplay {
     tick: string;
     id: string;
-    owner: string;
-    buri: string;
+    owner?: string;
     metadata: NFTMetadata;
+    isMinted: boolean;
 }
 
 export interface PaginatedNFTs {
