@@ -19,7 +19,7 @@ const nextConfig = {
         hostname: '**.ipfs.io',
       }
     ]
-  },
+  }
 }
 
 module.exports = nextConfig
