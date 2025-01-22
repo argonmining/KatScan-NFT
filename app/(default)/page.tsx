@@ -8,7 +8,6 @@ import Faqs from '@/components/faqs'
 import { NFTDisplay, PaginatedNFTs } from '@/types/nft'
 import { krc721Api } from '@/app/api/krc721/krc721'
 import { getIPFSContent } from '@/utils/ipfs'
-import { fetchCollectionNFTs } from '@/app/actions/nft'
 
 export default function Home() {
   const [searchType, setSearchType] = useState<'collection' | 'address'>('collection')
@@ -22,18 +21,6 @@ export default function Home() {
 
   const ITEMS_PER_PAGE = 12
 
-  const fetchNFTMetadata = async (tick: string, id: string, buri?: string) => {
-    if (!buri) return null;
-    
-    try {
-      const metadata = await getIPFSContent(buri.replace('{id}', id));
-      return metadata;
-    } catch (error) {
-      console.error('Error fetching metadata:', error);
-      return null;
-    }
-  }
-
   const handleSearch = async (type: 'collection' | 'address', value: string) => {
     setIsLoading(true)
     setError(null)
@@ -45,17 +32,63 @@ export default function Home() {
 
     try {
         if (type === 'collection') {
-            console.log('Searching collection:', value);
-            const response = await fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE });
-            console.log('Search results:', response);
+            // Get collection details
+            const collectionResponse = await krc721Api.getCollectionDetails(value);
             
-            if (!response) {
-                throw new Error('Failed to fetch collection data');
+            if (!collectionResponse.result) {
+                throw new Error(collectionResponse.message || 'Collection not found');
             }
-            
-            setNfts(response.nfts);
-            setHasMore(response.hasMore);
-            setNextOffset(response.nextOffset);
+
+            const { buri, minted } = collectionResponse.result;
+            if (!buri) {
+                throw new Error('Collection has no metadata URI');
+            }
+
+            const totalMinted = parseInt(minted);
+            const limit = ITEMS_PER_PAGE;
+            const offset = 0;
+
+            // Fetch tokens
+            const tokens = await Promise.all(
+                Array.from({ length: limit }, async (_, i) => {
+                    const tokenId = (offset + i + 1).toString();
+                    try {
+                        return await krc721Api.getToken(value, tokenId);
+                    } catch (error) {
+                        return null;
+                    }
+                })
+            );
+
+            // Process tokens
+            const nftPromises = tokens
+                .filter(token => token?.result)
+                .map(async (token) => {
+                    try {
+                        const tokenId = token.result.tokenId;
+                        const metadataUri = `${buri}/${tokenId}`;
+                        const metadata = await getIPFSContent(metadataUri);
+                        
+                        if (!metadata) return null;
+
+                        return {
+                            tick: value,
+                            id: tokenId,
+                            owner: token.result.owner,
+                            buri,
+                            metadata
+                        };
+                    } catch (error) {
+                        return null;
+                    }
+                });
+
+            const nftResults = await Promise.all(nftPromises);
+            const validNfts = nftResults.filter(nft => nft !== null) as NFTDisplay[];
+
+            setNfts(validNfts);
+            setHasMore(limit < totalMinted);
+            setNextOffset(limit < totalMinted ? limit.toString() : undefined);
         } else {
             // Handle address search similarly...
         }

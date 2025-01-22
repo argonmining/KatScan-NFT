@@ -113,29 +113,33 @@ export class KRC721Api {
 
     async getCollectionDetails(tick: string) {
         try {
-            return await ofetch(`${this.baseUrl}/nfts/${tick}`, {
+            const response = await ofetch(`${this.baseUrl}/nfts/${tick}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
+                retry: 1,
             });
+            return response;
         } catch (error) {
             console.error('API Request Error:', error);
-            throw error;
+            throw new Error(error instanceof Error ? error.message : 'Failed to fetch collection');
         }
     }
 
     async getToken(tick: string, tokenId: string) {
         try {
-            return await ofetch(`${this.baseUrl}/nfts/${tick}/${tokenId}`, {
+            const response = await ofetch(`${this.baseUrl}/nfts/${tick}/${tokenId}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
+                retry: 1,
             });
+            return response;
         } catch (error) {
             console.error('API Request Error:', error);
-            throw error;
+            throw new Error(error instanceof Error ? error.message : 'Failed to fetch token');
         }
     }
 
