@@ -12,9 +12,8 @@ export default function NFTCard({ nft }: NFTCardProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
 
-    // Debug log to see what we're getting
-    console.log('NFT metadata:', nft.metadata);
-    console.log('Image URL:', nft.metadata?.imageUrl);
+    // Convert IPFS image URL to Pinata URL once
+    const imageUrl = nft.metadata?.image?.replace('ipfs://', `${process.env.NEXT_PUBLIC_PINATA_GATEWAY_URL}/ipfs/`) + '.png';
 
     return (
         <div className="flip-card">
@@ -22,28 +21,14 @@ export default function NFTCard({ nft }: NFTCardProps) {
                 {/* Front */}
                 <div className="flip-card-front relative">
                     <div className="relative">
-                        {nft.metadata?.imageUrl ? (
+                        {imageUrl && (
                             <Image
                                 className={`w-full rounded-lg ${isLoading ? 'blur-sm' : ''}`}
-                                src={nft.metadata.imageUrl}
-                                width={400}
-                                height={400}
-                                alt={nft.metadata.name}
-                                onLoadingComplete={() => setIsLoading(false)}
-                                onError={() => {
-                                    setIsLoading(false);
-                                    setImageError(true);
-                                }}
-                                style={{ display: 'block' }}
-                            />
-                        ) : (
-                            <Image
-                                className={`w-full rounded-lg ${isLoading ? 'blur-sm' : ''}`}
-                                src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY_URL}/ipfs/${nft.metadata?.image?.replace('ipfs://', '')}.png`}
+                                src={imageUrl}
                                 width={400}
                                 height={400}
                                 alt={nft.metadata?.name || 'NFT'}
-                                onLoadingComplete={() => setIsLoading(false)}
+                                onLoad={() => setIsLoading(false)}
                                 onError={() => {
                                     setIsLoading(false);
                                     setImageError(true);

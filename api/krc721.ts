@@ -268,6 +268,50 @@ export class KRC721Api {
         }
     }
 
+    async getAllMintedTokens(tick: string) {
+        try {
+            // First get collection details to know total minted
+            const collectionDetails = await this.getCollectionDetails(tick);
+            if (!collectionDetails?.result?.minted) {
+                throw new Error('Could not determine total minted tokens');
+            }
+
+            const totalMinted = parseInt(collectionDetails.result.minted);
+            const maxTokenId = parseInt(collectionDetails.result.max); // Maximum possible token ID
+            const responses = [];
+            const batchSize = 50;
+
+            // Create batches of requests
+            for (let start = 1; start <= maxTokenId; start += batchSize) {
+                const batchPromises = [];
+                const end = Math.min(start + batchSize - 1, maxTokenId);
+
+                for (let id = start; id <= end; id++) {
+                    batchPromises.push(
+                        this.getToken(tick, id.toString())
+                    );
+                }
+
+                const batchResults = await Promise.all(batchPromises);
+                const validResults = batchResults.filter(result => 
+                    result && result.message === 'success' && result.result
+                );
+                
+                responses.push(...validResults);
+
+                // If we've found all minted tokens, we can stop
+                if (responses.length >= totalMinted) {
+                    break;
+                }
+            }
+
+            return responses;
+        } catch (error) {
+            console.error('Error fetching all minted tokens:', error);
+            throw error;
+        }
+    }
+
     // Add other API methods as needed...
 }
 

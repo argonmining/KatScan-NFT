@@ -33,9 +33,9 @@ export async function fetchCollectionNFTs(
     params?: { limit?: number; offset?: string }
 ): Promise<{ nfts: NFTDisplay[]; hasMore: boolean; nextOffset?: string }> {
     try {
+        // First get collection info to get total minted and metadata URI
         const collectionResponse = await krc721Api.getCollectionDetails(tick);
-        console.log('Collection Response:', collectionResponse);
-
+        
         if (!collectionResponse.result) {
             throw new Error(collectionResponse.message || 'Collection not found');
         }
@@ -49,59 +49,47 @@ export async function fetchCollectionNFTs(
         const limit = params?.limit || 12;
         const offset = params?.offset ? parseInt(params.offset) : 0;
 
-        // Use new method to get tokens
-        const tokenResponses = await krc721Api.getCollectionTokens(tick, offset + 1, limit);
-        console.log('Token Responses:', tokenResponses);
+        // Fetch all minted tokens in one call
+        const allTokens = await krc721Api.getAllMintedTokens(tick);
+        
+        // Sort tokens by ID and apply pagination
+        const paginatedTokens = allTokens
+            .sort((a, b) => parseInt(a.result.tokenid) - parseInt(b.result.tokenid))
+            .slice(offset, offset + limit);
 
-        // Process valid responses and fetch metadata
+        // Process valid responses and fetch metadata in parallel
         const nfts = await Promise.all(
-            tokenResponses.map(async (response) => {
+            paginatedTokens.map(async (token) => {
                 try {
-                    console.log('Processing token response:', response);
-                    
-                    const tokenId = response.result.tokenid || response.result.id;
-                    if (!tokenId) {
-                        console.error('No token ID found in response:', response);
-                        return null;
-                    }
+                    const tokenId = token.result.tokenid;
+                    if (!tokenId) return null;
 
-                    // Get metadata from IPFS
                     const metadataUri = `${buri}/${tokenId}`;
-                    console.log('Fetching metadata from:', metadataUri);
+                    const metadata = await getIPFSContent(metadataUri);
                     
-                    const metadata = await getIPFSContent(metadataUri) as NFTMetadata;
-                    console.log('Received metadata:', metadata);
-                    
-                    if (!metadata) {
-                        console.error('Failed to fetch metadata for token:', tokenId);
-                        return null;
-                    }
+                    if (!metadata) return null;
 
                     return {
                         tick,
                         id: tokenId,
-                        owner: response.result.owner,
+                        owner: token.result.owner,
                         buri,
                         metadata
                     };
                 } catch (error) {
-                    console.error('Error processing token:', error);
                     return null;
                 }
             })
         );
 
-        // Filter out null values and log final result
         const validNfts = nfts.filter(nft => nft !== null) as NFTDisplay[];
-        console.log('Final processed NFTs:', validNfts);
 
         return {
             nfts: validNfts,
-            hasMore: offset + limit < totalMinted,
-            nextOffset: offset + limit < totalMinted ? (offset + limit).toString() : undefined,
+            hasMore: offset + limit < allTokens.length,
+            nextOffset: offset + limit < allTokens.length ? (offset + limit).toString() : undefined,
         };
     } catch (error) {
-        console.error('Error in fetchCollectionNFTs:', error);
         if (error instanceof Error) {
             throw new Error(`Failed to fetch NFTs: ${error.message}`);
         }

@@ -1,25 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { krc721Api } from '@/api/krc721'
 
-export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
-    const path = params.path.join('/')
-    const { searchParams } = new URL(request.url)
-    const network = process.env.NEXT_PUBLIC_KRC721_NETWORK || 'testnet-10'
-    
-    const apiUrl = `https://${network}.krc721.stream/api/v1/krc721/${network}/${path}${
-        searchParams.toString() ? `?${searchParams.toString()}` : ''
-    }`
-
+export async function GET(
+    request: NextRequest,
+    { params }: { params: { path: string[] } }
+) {
     try {
-        const response = await fetch(apiUrl, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-        })
+        const path = params.path
+        
+        // Handle different API endpoints based on path segments
+        if (path[0] === 'nfts') {
+            const tick = path[1]
+            
+            if (!tick) {
+                return NextResponse.json({ error: 'Tick is required' }, { status: 400 })
+            }
 
-        const data = await response.json()
-        return NextResponse.json(data)
+            // Get collection details
+            if (path.length === 2) {
+                const response = await krc721Api.getCollectionDetails(tick)
+                return NextResponse.json(response)
+            }
+
+            // Get specific token
+            if (path.length === 3) {
+                const tokenId = path[2]
+                const response = await krc721Api.getToken(tick, tokenId)
+                return NextResponse.json(response)
+            }
+        }
+
+        return NextResponse.json({ error: 'Invalid endpoint' }, { status: 404 })
     } catch (error) {
-        return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
+        console.error('API Error:', error)
+        return NextResponse.json(
+            { error: 'Internal server error' }, 
+            { status: 500 }
+        )
     }
 } 
