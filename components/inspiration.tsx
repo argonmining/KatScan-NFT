@@ -4,16 +4,6 @@ import { useState, useMemo, useCallback } from 'react'
 
 import Link from 'next/link'
 import Image from 'next/image'
-import Author01 from '@/public/images/author-01.jpg'
-import Inspiration01 from '@/public/images/inspiration-01.jpg'
-import Inspiration02 from '@/public/images/inspiration-02.jpg'
-import Inspiration03 from '@/public/images/inspiration-03.jpg'
-import Inspiration04 from '@/public/images/inspiration-04.jpg'
-import Inspiration05 from '@/public/images/inspiration-05.jpg'
-import Inspiration06 from '@/public/images/inspiration-06.jpg'
-import Inspiration07 from '@/public/images/inspiration-07.jpg'
-import Inspiration08 from '@/public/images/inspiration-08.jpg'
-import Inspiration09 from '@/public/images/inspiration-09.jpg'
 import { NFTDisplay, FilterState } from '@/types/nft'
 import NFTCard from './nft-card'
 import NFTFilters from './nft-filters'
@@ -94,7 +84,7 @@ export default function Inspiration({
   }, [nfts, filters]);
 
   return (
-    <section>
+    <div className="relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="py-12 md:pt-32 md:pb-20">
           {/* Section header */}
@@ -144,17 +134,18 @@ export default function Inspiration({
               )}
 
               {/* NFT Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                 {filteredNFTs.map((nft) => (
-                  <NFTCard 
-                    key={`${nft.tick}-${nft.id || Math.random()}`} 
-                    nft={nft} 
-                  />
+                  <div key={nft.id} className="relative w-full" style={{ paddingBottom: '120%' }}>
+                    <div className="absolute inset-0">
+                      <NFTCard nft={nft} />
+                    </div>
+                  </div>
                 ))}
               </div>
 
               {/* Load More */}
-              {hasMore && filteredNFTs.length === nfts.length && (
+              {hasMore && nfts.length === filteredNFTs.length && (
                 <div className="mt-8 text-center">
                   <button
                     onClick={onLoadMore}
@@ -176,6 +167,6 @@ export default function Inspiration({
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }
