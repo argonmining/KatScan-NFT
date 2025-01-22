@@ -104,7 +104,7 @@ export class KRC721Api {
 
     setNetwork(network: Network) {
         this.network = network;
-        this.baseUrl = `https://${network}.krc721.stream/api/v1/krc721/${network}`;
+        this.baseUrl = '/api/krc721';
     }
 
     getNetwork(): Network {
