@@ -1,3 +1,5 @@
+import { ofetch } from 'ofetch'
+
 // Types
 export type Network = 'mainnet' | 'testnet-10' | 'testnet-11';
 type SOMPI = string;
@@ -181,20 +183,13 @@ export class KRC721Api {
         const url = `${this.baseUrl}/address/${address}${queryParams ? `?${queryParams}` : ''}`;
         
         try {
-            const response = await fetch(url, {
+            const data = await ofetch(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error Response:', errorText);
-                throw new Error(`API Error: ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
+            
             console.log('Address NFTs Response:', data);
             return data;
         } catch (error) {
@@ -232,28 +227,17 @@ export class KRC721Api {
 
     async getCollectionNFTs(tick: string, startId: number, limit: number = 12) {
         try {
-            // Create an array of promises for parallel fetching
             const promises = Array.from({ length: limit }, (_, i) => {
                 const id = (startId + i).toString();
                 const url = `${this.baseUrl}/nfts/${tick}/token/${id}`;
                 console.log('Fetching NFT:', url);
                 
-                return fetch(url, {
+                return ofetch(url, {
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                     },
-                })
-                .then(async response => {
-                    if (!response.ok) {
-                        console.error('NFT fetch failed:', response.statusText);
-                        return null;
-                    }
-                    const data = await response.json();
-                    console.log('NFT Response:', data);
-                    return data;
-                })
-                .catch(error => {
+                }).catch(error => {
                     console.error('NFT fetch error:', error);
                     return null;
                 });

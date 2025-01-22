@@ -19,6 +19,14 @@ const nextConfig = {
         hostname: '**.ipfs.io',
       }
     ]
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: '/api/:path*',
+      },
+    ]
   }
 }
 
