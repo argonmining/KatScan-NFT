@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { krc721Api } from '@/api/krc721'
+import { krc721Api } from '@/app/api/krc721/krc721'
 
 export const runtime = 'edge'
 

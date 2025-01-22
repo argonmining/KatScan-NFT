@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Network, krc721Api } from '@/api/krc721'
+import { Network, krc721Api } from '../app/api/krc721/krc721'
 
 interface NetworkSelectorProps {
     onNetworkChange?: (network: Network) => void;

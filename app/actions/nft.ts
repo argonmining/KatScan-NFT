@@ -1,6 +1,6 @@
 'use server'
 
-import { krc721Api } from '@/api/krc721'
+import { krc721Api } from '@/app/api/krc721/krc721'
 import { NFTDisplay, NFTMetadata } from '@/types/nft'
 import { getIPFSContent } from '@/utils/ipfs'
 

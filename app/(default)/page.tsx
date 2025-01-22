@@ -6,7 +6,7 @@ import Inspiration from '@/components/inspiration'
 import Carousel from '@/components/carousel'
 import Faqs from '@/components/faqs'
 import { NFTDisplay, PaginatedNFTs } from '@/types/nft'
-import { krc721Api } from '@/api/krc721'
+import { krc721Api } from '@/app/api/krc721/krc721'
 import { getIPFSContent } from '@/utils/ipfs'
 import { fetchCollectionNFTs } from '@/app/actions/nft'
 
