@@ -112,52 +112,30 @@ export class KRC721Api {
     }
 
     async getCollectionDetails(tick: string) {
-        const url = `${this.baseUrl}/nfts/${tick}`;
-        
         try {
-            const response = await fetch(url, {
+            return await ofetch(`${this.baseUrl}/nfts/${tick}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error Response:', errorText);
-                throw new Error(`API Error: ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            console.log('Collection Response:', data);
-            return data;
         } catch (error) {
             console.error('API Request Error:', error);
             throw error;
         }
     }
 
-    async getToken(tick: string, id: string) {
+    async getToken(tick: string, tokenId: string) {
         try {
-            const url = `${this.baseUrl}/nfts/${tick}/${id}`;
-            console.log('Fetching token:', url);
-            
-            const response = await fetch(url, {
+            return await ofetch(`${this.baseUrl}/nfts/${tick}/${tokenId}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error Response:', errorText);
-                return null;
-            }
-            return await response.json();
         } catch (error) {
             console.error('API Request Error:', error);
-            return null;
+            throw error;
         }
     }
 
