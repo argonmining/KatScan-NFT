@@ -45,17 +45,22 @@ export default function Home() {
 
     try {
         if (type === 'collection') {
-            console.log('Searching collection:', value); // Debug log
-            const { nfts, hasMore, nextOffset } = await fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE });
-            console.log('Search results:', { nfts, hasMore, nextOffset }); // Debug log
-            setNfts(nfts);
-            setHasMore(hasMore);
-            setNextOffset(nextOffset);
+            console.log('Searching collection:', value);
+            const response = await fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE });
+            console.log('Search results:', response);
+            
+            if (!response) {
+                throw new Error('Failed to fetch collection data');
+            }
+            
+            setNfts(response.nfts);
+            setHasMore(response.hasMore);
+            setNextOffset(response.nextOffset);
         } else {
             // Handle address search similarly...
         }
     } catch (error) {
-        console.error('Search error:', error); // Debug log
+        console.error('Search error:', error);
         setError(error instanceof Error ? error.message : 'Failed to fetch NFTs');
     } finally {
         setIsLoading(false);

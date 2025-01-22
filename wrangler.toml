@@ -1,0 +1,11 @@
+[build]
+command = "npm run build"
+[build.processing]
+skip_source_maps = true
+
+[[routes]]
+pattern = "/api/*"
+script = "app/api/[...path]/route.ts"
+
+[env]
+NODE_VERSION = "20" 
