@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { krc721Api } from '@/api/krc721'
 
+// Update the type to match Next.js 15's requirements
 type RouteContext = {
     params: {
         path: string[]
@@ -9,10 +10,11 @@ type RouteContext = {
 
 export async function GET(
     request: NextRequest,
-    context: RouteContext
+    // Use the correct type from Next.js
+    { params }: { params: { path: string[] } }
 ) {
     try {
-        const path = context.params.path
+        const path = params.path
         
         // Handle different API endpoints based on path segments
         if (path[0] === 'nfts') {
