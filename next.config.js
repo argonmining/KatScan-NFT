@@ -23,8 +23,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
-        destination: '/api/:path*',
+        source: '/api/krc721/:path*',
+        destination: '/api/krc721/:path*',
       },
     ]
   }

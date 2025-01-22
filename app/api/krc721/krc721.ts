@@ -104,6 +104,7 @@ export class KRC721Api {
 
     setNetwork(network: Network) {
         this.network = network;
+        // Use our API proxy
         this.baseUrl = '/api/krc721';
     }
 
@@ -176,7 +177,7 @@ export class KRC721Api {
             return data;
         } catch (error) {
             console.error('API Request Error:', error);
-            throw error;
+            throw new Error(error instanceof Error ? error.message : 'Failed to fetch address NFTs');
         }
     }
 
