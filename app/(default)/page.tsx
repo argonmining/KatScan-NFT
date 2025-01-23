@@ -8,7 +8,7 @@ import Faqs from '@/components/faqs'
 import { NFTDisplay, PaginatedNFTs } from '@/types/nft'
 import { krc721Api } from '@/app/api/krc721/krc721'
 import { getIPFSContent } from '@/utils/ipfs'
-import { fetchCollectionNFTs } from '@/app/actions/nft'
+import { fetchCollectionNFTs, loadMoreNFTsAction } from '@/app/actions/nft'
 
 export default function Home() {
   const [searchType, setSearchType] = useState<'collection' | 'address'>('collection')
@@ -48,16 +48,12 @@ export default function Home() {
     }
   }
 
-  const loadMore = async () => {
+  const handleLoadMore = async () => {
     if (!nextOffset || loadingMore) return
     
     setLoadingMore(true)
     try {
-        const response = await fetchCollectionNFTs(searchValue, {
-            limit: ITEMS_PER_PAGE,
-            offset: nextOffset
-        })
-        
+        const response = await loadMoreNFTsAction(searchValue, nextOffset, 100)
         setNfts(prev => [...prev, ...response.nfts])
         setHasMore(response.hasMore)
         setNextOffset(response.nextOffset)
@@ -87,7 +83,7 @@ export default function Home() {
         searchType={searchType}
         searchValue={searchValue}
         hasMore={hasMore}
-        onLoadMore={loadMore}
+        onLoadMoreAction={handleLoadMore}
       />
       <Carousel />
     </>
