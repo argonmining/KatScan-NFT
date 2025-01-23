@@ -1,5 +1,3 @@
-'use server'
-
 import { krc721Api } from '@/app/api/krc721/krc721'
 import { getIPFSContent } from '@/utils/ipfs'
 import { NFTDisplay, PaginatedNFTs } from '@/types/nft'
@@ -71,12 +69,4 @@ export async function fetchCollectionNFTs(
         console.error('Failed to fetch collection NFTs:', error);
         throw error;
     }
-}
-
-export async function loadMoreNFTsAction(
-    tick: string,
-    offset: string,
-    limit: number = 100
-): Promise<PaginatedNFTs> {
-    return fetchCollectionNFTs(tick, { limit, offset });
 } 

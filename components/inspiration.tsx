@@ -5,7 +5,6 @@ import { NFTDisplay, FilterState } from '@/types/nft'
 import NFTCard from './nft-card'
 import Select from 'react-select'
 import type { MultiValue } from 'react-select'
-import { loadMoreNFTsAction } from '@/app/actions/nft'
 
 interface InspirationProps {
   nfts: NFTDisplay[];
@@ -31,7 +30,7 @@ export default function Inspiration({
   searchType, 
   searchValue,
   hasMore,
-  onLoadMoreAction 
+  onLoadMoreAction
 }: InspirationProps) {
   const [filters, setFilters] = useState<FilterState>({});
 
