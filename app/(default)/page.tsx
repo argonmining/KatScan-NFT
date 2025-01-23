@@ -20,7 +20,7 @@ export default function Home() {
   const [nextOffset, setNextOffset] = useState<string>()
   const [hasMore, setHasMore] = useState(false)
 
-  const ITEMS_PER_PAGE = 100
+  const ITEMS_PER_PAGE = 1000
 
   const handleSearch = async (type: 'collection' | 'address', value: string) => {
     setIsLoading(true)
