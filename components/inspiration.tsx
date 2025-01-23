@@ -23,6 +23,15 @@ interface FilterOption {
   value: string;
 }
 
+// Helper function to convert Sompi to KAS
+const sompiToKAS = (sompi: string): string => {
+  const value = BigInt(sompi);
+  const whole = value / BigInt(100000000);
+  const fraction = value % BigInt(100000000);
+  const fractionStr = fraction.toString().padStart(8, '0');
+  return `${whole}.${fractionStr} KAS`;
+};
+
 export default function Inspiration({ 
   nfts, 
   isLoading, 
@@ -108,11 +117,11 @@ export default function Inspiration({
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-500">Royalty Fee</div>
+                      <div className="text-sm font-medium text-gray-500">Mint Cost</div>
                       <div className="text-lg font-semibold mt-1">
                         {collection.royaltyFee 
-                          ? `${(Number(collection.royaltyFee) / 1e10).toFixed(2)}%`
-                          : 'None'}
+                          ? sompiToKAS(collection.royaltyFee)
+                          : 'Free'}
                       </div>
                     </div>
                     <div>
