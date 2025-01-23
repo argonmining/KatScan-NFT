@@ -23,13 +23,15 @@ interface FilterOption {
   value: string;
 }
 
-// Helper function to convert Sompi to KAS
-const sompiToKAS = (sompi: string): string => {
+// Helper function to convert Sompi to KAS with optional decimal places
+const sompiToKAS = (sompi: string, decimals: number = 8): string => {
   const value = BigInt(sompi);
   const whole = value / BigInt(100000000);
   const fraction = value % BigInt(100000000);
   const fractionStr = fraction.toString().padStart(8, '0');
-  return `${whole}.${fractionStr} KAS`;
+  return decimals === 0 
+    ? `${whole} KAS`
+    : `${whole}.${fractionStr.slice(0, decimals)} KAS`;
 };
 
 export default function Inspiration({ 
@@ -118,10 +120,19 @@ export default function Inspiration({
                     </div>
                     <div>
                       <div className="text-sm font-medium text-gray-500">Mint Cost</div>
-                      <div className="text-lg font-semibold mt-1">
+                      <div className="text-lg font-semibold mt-1 group relative cursor-help">
                         {collection.royaltyFee 
-                          ? sompiToKAS(collection.royaltyFee)
+                          ? sompiToKAS(collection.royaltyFee, 0)
                           : 'Free'}
+                        
+                        {/* Tooltip with full value */}
+                        {collection.royaltyFee && (
+                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block">
+                            <div className="bg-gray-900 text-white text-sm rounded py-1 px-2 whitespace-nowrap">
+                              {sompiToKAS(collection.royaltyFee)}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
