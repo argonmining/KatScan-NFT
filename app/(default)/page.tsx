@@ -5,7 +5,7 @@ import Hero from '@/components/hero'
 import Inspiration from '@/components/inspiration'
 import Carousel from '@/components/carousel'
 import Faqs from '@/components/faqs'
-import { NFTDisplay, PaginatedNFTs } from '@/types/nft'
+import { CollectionInfo, NFTDisplay, PaginatedNFTs } from '@/types/nft'
 import { krc721Api } from '@/app/api/krc721/krc721'
 import { getIPFSContent } from '@/utils/ipfs'
 import { fetchCollectionNFTs } from '@/app/actions/nft'
@@ -19,6 +19,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [nextOffset, setNextOffset] = useState<string>()
   const [hasMore, setHasMore] = useState(false)
+  const [collectionInfo, setCollectionInfo] = useState<CollectionInfo>();
 
   const ITEMS_PER_PAGE = 500
 
@@ -30,6 +31,7 @@ export default function Home() {
     setHasMore(false)
     setSearchType(type)
     setSearchValue(value)
+    setCollectionInfo(undefined)
 
     try {
         if (type === 'collection') {
@@ -37,6 +39,9 @@ export default function Home() {
             setNfts(response.nfts)
             setHasMore(response.hasMore)
             setNextOffset(response.nextOffset)
+            if (response.collection) {
+                setCollectionInfo(response.collection)
+            }
         } else {
             // Handle address search
         }
@@ -87,6 +92,7 @@ export default function Home() {
         searchValue={searchValue}
         hasMore={hasMore}
         onLoadMoreAction={handleLoadMore}
+        collection={collectionInfo}
       />
       {/* <Carousel /> */}
       {/* <Faqs /> */}
