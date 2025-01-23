@@ -14,7 +14,19 @@ export async function fetchCollectionNFTs(
             throw new Error(collectionResponse.message || 'Collection not found');
         }
 
-        const { buri, minted } = collectionResponse.result;
+        const { 
+            buri, 
+            minted,
+            max,
+            deployer,
+            royaltyTo,
+            royaltyFee,
+            daaMintStart,
+            premint,
+            tick: collectionTick,
+            state,
+        } = collectionResponse.result;
+
         if (!buri) {
             throw new Error('Collection has no metadata URI');
         }
@@ -63,7 +75,18 @@ export async function fetchCollectionNFTs(
         return {
             nfts: validNfts,
             hasMore: offset + limit < 1000,
-            nextOffset: offset + limit < 1000 ? (offset + limit).toString() : undefined
+            nextOffset: offset + limit < 1000 ? (offset + limit).toString() : undefined,
+            collection: {
+                deployer,
+                royaltyTo,
+                max,
+                royaltyFee,
+                minted,
+                tick: collectionTick,
+                daaMintStart,
+                premint,
+                state
+            }
         };
     } catch (error) {
         console.error('Failed to fetch collection NFTs:', error);

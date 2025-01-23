@@ -97,25 +97,50 @@ export default function Inspiration({
                   : 'Search for NFTs'}
               </h2>
               
-              {collection && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-8">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Debug collection info */}
+              {collection && searchType === 'collection' && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <div>
                       <div className="text-sm font-medium text-gray-500">Supply</div>
-                      <div className="text-lg font-semibold">{collection.minted} / {collection.max}</div>
+                      <div className="text-lg font-semibold mt-1">
+                        {collection.minted} / {collection.max}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm font-medium text-gray-500">Royalty Fee</div>
-                      <div className="text-lg font-semibold">
+                      <div className="text-lg font-semibold mt-1">
                         {collection.royaltyFee 
                           ? `${(Number(collection.royaltyFee) / 1e10).toFixed(2)}%`
                           : 'None'}
                       </div>
                     </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-500">Pre-mint</div>
+                      <div className="text-lg font-semibold mt-1">
+                        {collection.premint || '0'}
+                      </div>
+                    </div>
+                    <div className="col-span-2 md:col-span-1">
+                      <div className="text-sm font-medium text-gray-500">State</div>
+                      <div className="text-lg font-semibold mt-1">
+                        {collection.state || 'Unknown'}
+                      </div>
+                    </div>
                     <div className="col-span-2">
                       <div className="text-sm font-medium text-gray-500">Deployer</div>
-                      <div className="text-sm font-mono truncate">{collection.deployer}</div>
+                      <div className="text-sm font-mono truncate mt-1 hover:text-clip">
+                        {collection.deployer}
+                      </div>
                     </div>
+                    {collection.royaltyTo && (
+                      <div className="col-span-2 md:col-span-3">
+                        <div className="text-sm font-medium text-gray-500">Royalty Recipient</div>
+                        <div className="text-sm font-mono truncate mt-1 hover:text-clip">
+                          {collection.royaltyTo}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -25,6 +25,9 @@ export interface CollectionInfo {
     royaltyFee?: string;
     minted: string;
     tick: string;
+    daaMintStart?: string;
+    premint?: string;
+    state?: string;
 }
 
 export interface PaginatedNFTs {
