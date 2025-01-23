@@ -18,10 +18,20 @@ export interface NFTDisplay {
     isMinted: boolean;
 }
 
+export interface CollectionInfo {
+    deployer: string;
+    royaltyTo?: string;
+    max: string;
+    royaltyFee?: string;
+    minted: string;
+    tick: string;
+}
+
 export interface PaginatedNFTs {
     nfts: NFTDisplay[];
     hasMore: boolean;
     nextOffset?: string;
+    collection?: CollectionInfo;
 }
 
 export interface TraitFilter {

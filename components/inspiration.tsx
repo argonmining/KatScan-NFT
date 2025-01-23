@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { NFTDisplay, FilterState } from '@/types/nft'
+import { NFTDisplay, FilterState, CollectionInfo } from '@/types/nft'
 import NFTCard from './nft-card'
 import Select from 'react-select'
 import type { MultiValue } from 'react-select'
@@ -15,6 +15,7 @@ interface InspirationProps {
   searchValue: string;
   hasMore: boolean;
   onLoadMoreAction: () => Promise<void>;
+  collection?: CollectionInfo;
 }
 
 interface FilterOption {
@@ -30,7 +31,8 @@ export default function Inspiration({
   searchType, 
   searchValue,
   hasMore,
-  onLoadMoreAction
+  onLoadMoreAction,
+  collection
 }: InspirationProps) {
   const [filters, setFilters] = useState<FilterState>({});
 
@@ -87,14 +89,36 @@ export default function Inspiration({
     <div className="relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="py-12 md:pt-32 md:pb-20">
-          {/* Section header */}
           <div className="pb-12 md:pb-14">
             <div className="relative text-center md:text-left">
-              <h2 className="h2 font-cabinet-grotesk">
+              <h2 className="h2 font-cabinet-grotesk mb-6">
                 {searchValue 
                   ? `${searchType === 'collection' ? 'Collection' : 'Address'}: ${searchValue}`
                   : 'Search for NFTs'}
               </h2>
+              
+              {collection && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-8">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-500">Supply</div>
+                      <div className="text-lg font-semibold">{collection.minted} / {collection.max}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-500">Royalty Fee</div>
+                      <div className="text-lg font-semibold">
+                        {collection.royaltyFee 
+                          ? `${(Number(collection.royaltyFee) / 1e10).toFixed(2)}%`
+                          : 'None'}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="text-sm font-medium text-gray-500">Deployer</div>
+                      <div className="text-sm font-mono truncate">{collection.deployer}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
