@@ -24,10 +24,13 @@ export function calculateTraitRarities(metadataMap: Record<string, NFTMetadata>)
             });
         });
 
-        // Calculate percentages safely
+        // Calculate percentages and invert them (100 - percentage)
+        // So that rarer traits have higher percentages
         Object.values(traitCounts).forEach((traitValues) => {
             Object.values(traitValues).forEach((stats) => {
-                stats.percentage = Number(((stats.count / totalNFTs) * 100).toFixed(1));
+                const rawPercentage = (stats.count / totalNFTs) * 100;
+                // Invert the percentage so higher = rarer
+                stats.percentage = Number((100 - rawPercentage).toFixed(1));
             });
         });
 
