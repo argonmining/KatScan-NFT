@@ -291,9 +291,13 @@ export default function Inspiration({
             )}
 
             {/* NFT Grid */}
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
               {filteredNFTs.map((nft) => (
-                <div key={`${nft.tick}-${nft.id}`} className="relative w-full" style={{ paddingBottom: '120%' }}>
+                <div 
+                  key={`${nft.tick}-${nft.id}`} 
+                  className="relative w-full" 
+                  style={{ paddingBottom: '120%' }}
+                >
                   <div className="absolute inset-0">
                     <NFTCard nft={nft} />
                   </div>
