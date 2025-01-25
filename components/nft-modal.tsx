@@ -92,7 +92,7 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                                             <span className={`text-2xl font-bold ${
                                                                 nft.metadata.overallRarity > 90 ? 'text-purple-400' :
                                                                 nft.metadata.overallRarity > 80 ? 'text-blue-400' :
-                                                                nft.metadata.overallRarity > 70 ? 'text-green-400' :
+                                                                nft.metadata.overallRarity > 69 ? 'text-green-400' :
                                                                 'text-gray-400'
                                                             }`}>
                                                                 {nft.metadata.overallRarity > 90 ? 'Legendary' :
