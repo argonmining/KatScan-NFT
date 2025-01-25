@@ -127,7 +127,7 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                         // Traits View
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-400 mb-2">
-                                                ATTRIBUTES
+                                                TRAITS
                                             </h3>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 {nft.metadata.attributes?.map((attr, index) => (
