@@ -52,17 +52,18 @@ export function calculateOverallRarity(
 
         if (validAttributes.length === 0) return undefined;
 
-        // Calculate average rarity (lower = rarer)
-        const rarityScore = validAttributes.reduce((score, attr) => {
+        // Calculate statistical rarity (probability of all traits occurring together)
+        const probabilityScore = validAttributes.reduce((score, attr) => {
             const traitRarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
             if (typeof traitRarity !== 'number') return score;
-            return score + traitRarity;
-        }, 0);
+            // Convert percentage to probability (divide by 100)
+            return score * (traitRarity / 100);
+        }, 1);
 
-        const averageRarity = rarityScore / validAttributes.length;
+        // Convert probability back to percentage and round to 2 decimal places
+        const rarityPercentage = probabilityScore * 100;
         
-        // Return the average rarity percentage (lower = rarer)
-        return Number(averageRarity.toFixed(2));
+        return Number(rarityPercentage.toFixed(2));
     } catch (error) {
         console.error('Error calculating overall rarity:', error);
         return undefined;
