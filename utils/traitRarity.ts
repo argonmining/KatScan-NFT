@@ -24,13 +24,10 @@ export function calculateTraitRarities(metadataMap: Record<string, NFTMetadata>)
             });
         });
 
-        // Calculate percentages and invert them (100 - percentage)
-        // So that rarer traits have higher percentages
+        // Calculate percentages - lower percentage means rarer
         Object.values(traitCounts).forEach((traitValues) => {
             Object.values(traitValues).forEach((stats) => {
-                const rawPercentage = (stats.count / totalNFTs) * 100;
-                // Invert the percentage so higher = rarer
-                stats.percentage = Number((100 - rawPercentage).toFixed(1));
+                stats.percentage = Number(((stats.count / totalNFTs) * 100).toFixed(1));
             });
         });
 
@@ -55,6 +52,7 @@ export function calculateOverallRarity(
 
         if (validAttributes.length === 0) return undefined;
 
+        // Calculate average rarity (lower = rarer)
         const rarityScore = validAttributes.reduce((score, attr) => {
             const traitRarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
             if (typeof traitRarity !== 'number') return score;
@@ -62,9 +60,9 @@ export function calculateOverallRarity(
         }, 0);
 
         const averageRarity = rarityScore / validAttributes.length;
-        const invertedScore = Math.max(0, Math.min(100, 100 - averageRarity));
         
-        return Number(invertedScore.toFixed(2));
+        // Return the average rarity percentage (lower = rarer)
+        return Number(averageRarity.toFixed(2));
     } catch (error) {
         console.error('Error calculating overall rarity:', error);
         return undefined;
