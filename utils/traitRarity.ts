@@ -73,22 +73,22 @@ export function calculateOverallRarity(
             if (typeof traitRarity !== 'number' || typeof avgRarity !== 'number') return;
 
             // Calculate how much rarer this trait is compared to average
-            // Lower percentage means rarer, so we invert the comparison
-            const rarityMultiplier = avgRarity / traitRarity;
+            // Lower percentage means rarer, so we keep this comparison
+            const rarityMultiplier = traitRarity / avgRarity;
             rarityScore += rarityMultiplier;
         });
 
         // Average the score across all traits
         const finalScore = rarityScore / validAttributes.length;
         
-        // Convert to a 0-100 scale where higher numbers mean more common
+        // Convert to a 0-100 scale where lower numbers mean rarer
         // We use log scale to prevent extreme values
         const normalizedScore = Math.min(100, 
             (100 / Math.log10(11)) * Math.log10(finalScore + 1)
         );
 
-        // Return rounded to 2 decimal places
-        return Number((100 - normalizedScore).toFixed(2));
+        // Return the normalized score (lower = rarer)
+        return Number(normalizedScore.toFixed(2));
     } catch (error) {
         console.error('Error calculating overall rarity:', error);
         return undefined;
