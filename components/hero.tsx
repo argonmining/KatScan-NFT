@@ -4,29 +4,45 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import NetworkSelector from './network-selector'
+import { ArrowRight } from 'lucide-react'
+import DeploymentsTicker from './deployments-ticker'
 
 import HeroImage from '@/public/images/hero-image.png'
 
 interface HeroProps {
-  onSearch: (type: 'collection' | 'address', value: string) => void;
+  onSearchAction: (type: 'collection' | 'address', value: string) => void;
   isLoading: boolean;
+  searchType: 'collection' | 'address';
+  searchValue: string;
+  onSearchValueChangeAction: (value: string) => void;
+  onSearchTypeChangeAction: (type: 'collection' | 'address') => void;
 }
 
-export default function Hero({ onSearch, isLoading }: HeroProps) {
-  const [searchType, setSearchType] = useState<'collection' | 'address'>('collection')
-  const [searchValue, setSearchValue] = useState('')
-
+export default function Hero({ 
+  onSearchAction, 
+  isLoading, 
+  searchType,
+  searchValue,
+  onSearchValueChangeAction,
+  onSearchTypeChangeAction
+}: HeroProps) {
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchValue.trim()) {
-      onSearch(searchType, searchValue.trim())
+      onSearchAction(searchType, searchValue.trim());
     }
-  }
+  };
+
+  const handleTickerClick = (tick: string) => {
+    onSearchTypeChangeAction('collection');
+    onSearchValueChangeAction(tick);
+    onSearchAction('collection', tick);
+  };
 
   return (
     <section className="relative">
       {/* Bg */}
-      <div className="absolute inset-0 rounded-bl-[100px] bg-gray-50 pointer-events-none -z-10" aria-hidden="true" />
+      <div className="absolute inset-0 bg-gray-50 pointer-events-none -z-10" aria-hidden="true" />
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="pt-32 pb-12 md:pt-40 md:pb-20">
           {/* Hero content */}
@@ -40,63 +56,75 @@ export default function Hero({ onSearch, isLoading }: HeroProps) {
               </p>
               
               {/* Search form */}
-              <form onSubmit={handleSubmit} className="max-w-xl mx-auto">
-                <div className="flex flex-col space-y-4">
-                  {/* Search type and network selector row */}
-                  <div className="flex items-center justify-center space-x-4">
-                    {/* Search type buttons */}
-                    <div className="flex rounded-md shadow-sm" role="group">
-                      <button
-                        type="button"
-                        className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
-                          searchType === 'collection'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                        onClick={() => setSearchType('collection')}
-                      >
-                        Collection
-                      </button>
-                      <button
-                        type="button"
-                        className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
-                          searchType === 'address'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                        onClick={() => setSearchType('address')}
-                      >
-                        Address
-                      </button>
-                    </div>
-                    
-                    {/* Network selector */}
-                    <NetworkSelector />
-                  </div>
+              <div className="flex flex-col items-center">
+                {/* Search Type Toggle */}
+                <div className="flex space-x-4 mb-4">
+                  <button
+                    onClick={() => onSearchTypeChangeAction('collection')}
+                    className={`px-4 py-2 rounded ${
+                      searchType === 'collection' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200'
+                    }`}
+                  >
+                    Collection
+                  </button>
+                  <button
+                    onClick={() => onSearchTypeChangeAction('address')}
+                    className={`px-4 py-2 rounded ${
+                      searchType === 'address' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200'
+                    }`}
+                  >
+                    Address
+                  </button>
+                </div>
 
-                  {/* Search input */}
-                  <div className="flex">
+                {/* Search Input */}
+                <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
+                  <div className="relative group">
                     <input
                       type="text"
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      placeholder={searchType === 'collection' ? "Enter collection ticker..." : "Enter Kaspa address..."}
                       value={searchValue}
-                      onChange={(e) => setSearchValue(e.target.value)}
+                      onChange={(e) => onSearchValueChangeAction(e.target.value)}
+                      placeholder={
+                        searchType === 'collection'
+                          ? 'Enter a collection ticker to search...'
+                          : 'Enter a Kaspa address to search...'
+                      }
+                      className="w-full px-6 py-4 text-sm font-mono bg-white border-2 border-gray-200 
+                               rounded-xl shadow-sm transition-all duration-200 
+                               focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                               disabled:bg-gray-50 disabled:cursor-not-allowed
+                               placeholder:text-gray-400"
                       disabled={isLoading}
                     />
                     <button
                       type="submit"
-                      className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                       disabled={isLoading || !searchValue.trim()}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2
+                               text-gray-400 hover:text-blue-500 disabled:text-gray-300
+                               transition-colors duration-200 rounded-lg
+                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
-                      {isLoading ? 'Searching...' : 'Search'}
+                      {isLoading ? (
+                        <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+                      ) : (
+                        <ArrowRight className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Add ticker at the bottom */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <DeploymentsTicker onTickerClick={handleTickerClick} />
       </div>
     </section>
   )

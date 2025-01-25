@@ -7,6 +7,7 @@ export interface NFTMetadata {
     attributes: Array<{
         trait_type: string;
         value: string;
+        rarity?: number;
     }>;
 }
 
@@ -16,6 +17,12 @@ export interface NFTDisplay {
     owner?: string;
     metadata: NFTMetadata;
     isMinted: boolean;
+}
+
+export interface CollectionMetadata {
+    name: string;
+    description: string;
+    // Add other collection metadata fields as needed
 }
 
 export interface CollectionInfo {
@@ -28,6 +35,7 @@ export interface CollectionInfo {
     daaMintStart?: string;
     premint?: string;
     state?: string;
+    metadata?: CollectionMetadata;
 }
 
 export interface PaginatedNFTs {
@@ -44,4 +52,13 @@ export interface TraitFilter {
 
 export interface FilterState {
     [trait_type: string]: Set<string>;
+}
+
+export interface TraitRarity {
+    [trait_type: string]: {
+        [value: string]: {
+            count: number;
+            percentage: number;
+        }
+    }
 } 

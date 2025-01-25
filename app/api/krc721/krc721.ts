@@ -94,14 +94,21 @@ type Operation = DeployOperation | MintOperation | TransferOperation;
 // Get network from environment or default to testnet-10
 const DEFAULT_NETWORK: Network = (process.env.NEXT_PUBLIC_KRC721_NETWORK as Network) || 'testnet-10';
 
+// Add interface at the top with other interfaces
+interface TokenStatus {
+    owner?: string;
+    isMinted: boolean;
+}
+
 export class KRC721Api {
     private network: Network;
     private baseUrl: string;
+    private tokenStatusCache: Map<string, TokenStatus>;
 
     constructor(network: Network = DEFAULT_NETWORK) {
         this.network = network;
-        // Initialize baseUrl with empty string
         this.baseUrl = ''; // Will be set properly in setNetwork
+        this.tokenStatusCache = new Map<string, TokenStatus>();
         this.setNetwork(network);
     }
 
@@ -166,23 +173,30 @@ export class KRC721Api {
         }
     }
 
-    async getAddressNFTs(address: string, params?: { limit?: number; offset?: string }) {
-        const queryParams = new URLSearchParams(params as Record<string, string>).toString();
-        const url = `${this.baseUrl}/api/krc721/address/${address}${queryParams ? `?${queryParams}` : ''}`;
-        
+    async getAddressNFTs(address: string) {
         try {
-            const data = await ofetch(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-            });
+            let allNFTs: Array<{tick: string; tokenId: string; buri?: string}> = [];
+            let nextOffset: string | undefined;
             
-            console.log('Address NFTs Response:', data);
-            return data;
+            do {
+                const response = await ofetch(`${this.baseUrl}/api/krc721/address/${address}${nextOffset ? `?offset=${nextOffset}` : ''}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    retry: 1,
+                });
+                
+                if (response.result) {
+                    allNFTs = [...allNFTs, ...response.result];
+                    nextOffset = response.next;
+                }
+            } while (nextOffset);
+
+            return allNFTs;
         } catch (error) {
-            console.error('API Request Error:', error);
-            throw new Error(error instanceof Error ? error.message : 'Failed to fetch address NFTs');
+            console.error('Failed to fetch address NFTs:', error);
+            throw error;
         }
     }
 
@@ -282,6 +296,101 @@ export class KRC721Api {
             console.error('Error fetching all minted tokens:', error);
             throw error;
         }
+    }
+
+    // Update the getAllTokenOwners method
+    async getAllTokenOwners(tick: string): Promise<Record<string, TokenStatus>> {
+        try {
+            // First get the total count from initial request
+            const initialResponse = await ofetch(
+                `${this.baseUrl}/api/krc721/owners/${tick}`,  // Remove v1 and network from path
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    retry: 1,
+                }
+            );
+
+            let allOwners: Array<{tick: string; tokenId: string; owner: string}> = [];
+            
+            if (initialResponse.result) {
+                allOwners = [...initialResponse.result];
+                
+                // If there's more data, fetch in parallel
+                if (initialResponse.next) {
+                    // Calculate total pages based on first response
+                    const pageSize = 50; // API's default page size
+                    const firstOffset = parseInt(initialResponse.next);
+                    const totalPages = Math.ceil((firstOffset * 2) / pageSize);
+                    
+                    // Create parallel requests for remaining pages
+                    const pagePromises = Array.from({ length: totalPages - 1 }, (_, i) => {
+                        const offset = (i + 1) * pageSize;
+                        return ofetch(
+                            `${this.baseUrl}/api/krc721/owners/${tick}?offset=${offset}`,  // Remove v1 and network from path
+                            {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                },
+                                retry: 1,
+                            }
+                        );
+                    });
+
+                    // Execute requests in parallel with a reasonable batch size
+                    const CONCURRENT_BATCH_SIZE = 5;
+                    for (let i = 0; i < pagePromises.length; i += CONCURRENT_BATCH_SIZE) {
+                        const batch = pagePromises.slice(i, i + CONCURRENT_BATCH_SIZE);
+                        const batchResults = await Promise.all(batch);
+                        batchResults.forEach(response => {
+                            if (response.result) {
+                                allOwners = [...allOwners, ...response.result];
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Convert to TokenStatus format
+            return allOwners.reduce((acc, { tokenId, owner }) => {
+                acc[tokenId] = {
+                    owner,
+                    isMinted: true
+                };
+                return acc;
+            }, {} as Record<string, TokenStatus>);
+        } catch (error) {
+            console.error('Failed to fetch token owners:', error);
+            throw error;
+        }
+    }
+
+    // Update getTokensBatch to use getAllTokenOwners
+    async getTokensBatch(tick: string, tokenIds: string[]): Promise<Record<string, TokenStatus>> {
+        // First check cache for all requested tokens
+        const uncachedTokenIds = tokenIds.filter(id => !this.tokenStatusCache.has(`${tick}-${id}`));
+        
+        if (uncachedTokenIds.length > 0) {
+            // Fetch all token owners in one request
+            const allTokenStatuses = await this.getAllTokenOwners(tick);
+            
+            // Update cache with new results
+            Object.entries(allTokenStatuses).forEach(([id, status]) => {
+                const cacheKey = `${tick}-${id}`;
+                this.tokenStatusCache.set(cacheKey, status);
+            });
+        }
+
+        // Get all requested tokens from cache
+        return tokenIds.reduce((acc, id) => {
+            const cacheKey = `${tick}-${id}`;
+            const status = this.tokenStatusCache.get(cacheKey);
+            acc[id] = status || { owner: undefined, isMinted: false };
+            return acc;
+        }, {} as Record<string, TokenStatus>);
     }
 
     // Add other API methods as needed...

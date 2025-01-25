@@ -29,6 +29,14 @@ interface IPFSMetadata {
     }>;
 }
 
+// Prioritized list of gateways - order matters for performance
+const IPFS_GATEWAYS = [
+    'https://w3s.link/ipfs/',
+    PINATA_GATEWAY + '/ipfs/',
+    'https://cloudflare-ipfs.com/ipfs/',
+    'https://ipfs.io/ipfs/'
+];
+
 async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
@@ -57,38 +65,42 @@ function getIPFSHash(uri: string): string {
     return uri.replace('ipfs://', '');
 }
 
-export async function getIPFSContent(uri: string) {
-    if (!uri) return null;
-
+export async function getIPFSContent(uri: string, retries = 3): Promise<any> {
     // Check cache first
-    const cached = ipfsCache.get(uri);
-    if (cached) return cached;
-
-    try {
-        const hash = getIPFSHash(uri);
-        
-        // Use our API proxy to fetch IPFS content
-        const response = await fetch(`/api/ipfs/${hash}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch IPFS content: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        // If the data has an image field that's an IPFS URI, process it
-        if (data.image && data.image.startsWith('ipfs://')) {
-            const imageHash = getIPFSHash(data.image);
-            // Don't append .png if the image already has an extension
-            data.imageUrl = hasImageExtension(data.image) 
-                ? `/api/ipfs/${imageHash}`
-                : `/api/ipfs/${imageHash}.png`;
-        }
-
-        // Cache the result
-        ipfsCache.set(uri, data);
-        return data;
-    } catch (error) {
-        console.error('Error fetching IPFS content:', error);
-        return null;
+    const cacheKey = uri.replace('ipfs://', '');
+    if (ipfsCache.has(cacheKey)) {
+        return ipfsCache.get(cacheKey);
     }
+
+    const cid = cacheKey.split('/');
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < retries; attempt++) {
+        for (const gateway of IPFS_GATEWAYS) {
+            try {
+                const url = `${gateway}${cid[0]}/${cid[1] || ''}`;
+                const response = await fetchWithTimeout(url);
+                
+                if (!response.ok) {
+                    console.warn(`Gateway ${gateway} returned ${response.status} for ${url}`);
+                    continue;
+                }
+
+                const data = await response.json();
+                // Cache successful response
+                ipfsCache.set(cacheKey, data);
+                return data;
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error('Unknown error');
+                console.warn(`Failed to fetch from ${gateway}:`, error);
+                continue;
+            }
+        }
+        // Exponential backoff between retries
+        if (attempt < retries - 1) {
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        }
+    }
+    
+    throw new Error(`Failed to fetch IPFS content after ${retries} retries: ${lastError?.message || 'Unknown error'}`);
 } 

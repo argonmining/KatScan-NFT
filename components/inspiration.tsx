@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { NFTDisplay, FilterState, CollectionInfo } from '@/types/nft'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { NFTDisplay, FilterState, CollectionInfo as CollectionInfoType } from '@/types/nft'
 import NFTCard from './nft-card'
 import Select from 'react-select'
 import type { MultiValue } from 'react-select'
+import AddressInfo from './address-info'
+import CollectionFilter from './collection-filter'
+import CollectionInfo from './collection-info'
 
 interface InspirationProps {
   nfts: NFTDisplay[];
@@ -15,12 +18,19 @@ interface InspirationProps {
   searchValue: string;
   hasMore: boolean;
   onLoadMoreAction: () => Promise<void>;
-  collection?: CollectionInfo;
+  collection?: CollectionInfoType;
+  hasSearched: boolean;
 }
 
 interface FilterOption {
   label: string;
   value: string;
+}
+
+// Add new interface for collection filter option
+interface CollectionFilterOption {
+  label: string;  // Collection name or tick
+  value: string;  // Collection tick
 }
 
 // Helper function to convert Sompi to KAS with optional decimal places
@@ -43,7 +53,8 @@ export default function Inspiration({
   searchValue,
   hasMore,
   onLoadMoreAction,
-  collection
+  collection,
+  hasSearched
 }: InspirationProps) {
   const [filters, setFilters] = useState<FilterState>({});
 
@@ -68,6 +79,17 @@ export default function Inspiration({
     return options;
   }, [nfts]);
 
+  // Generate collection filter options for address search
+  const collectionFilterOptions = useMemo(() => {
+    if (searchType !== 'address') return [];
+    
+    const collections = new Set(nfts.map(nft => nft.tick));
+    return Array.from(collections).map(tick => ({
+      label: tick,  // Could use collection name if available
+      value: tick
+    }));
+  }, [nfts, searchType]);
+
   const handleFilterChange = useCallback((trait_type: string, selectedOptions: MultiValue<FilterOption>) => {
     setFilters(prevFilters => {
       const newFilters = { ...prevFilters };
@@ -82,111 +104,137 @@ export default function Inspiration({
     });
   }, []);
 
+  // Modify the filter section JSX
   const filteredNFTs = useMemo(() => {
     if (Object.keys(filters).length === 0) return nfts;
 
     return nfts.filter(nft => {
-      const attributes = nft.metadata?.attributes;
-      if (!attributes) return false;
+      if (searchType === 'address') {
+        // Filter by collection for address search
+        return filters['collection']?.has(nft.tick) ?? true;
+      } else {
+        // Filter by traits for collection search
+        const attributes = nft.metadata?.attributes;
+        if (!attributes) return false;
 
-      return Object.entries(filters).every(([trait_type, allowedValues]) => {
-        const attribute = attributes.find(attr => attr.trait_type === trait_type);
-        return attribute && allowedValues.has(attribute.value);
-      });
+        return Object.entries(filters).every(([trait_type, allowedValues]) => {
+          const attribute = attributes.find(attr => attr.trait_type === trait_type);
+          return attribute && allowedValues.has(attribute.value);
+        });
+      }
     });
-  }, [nfts, filters]);
+  }, [nfts, filters, searchType]);
+
+  // Add effect to sync filters with dropdown values
+  useEffect(() => {
+    // Get URL params
+    const params = new URLSearchParams(window.location.search);
+    const filtersParam = params.get('filters');
+    
+    if (filtersParam) {
+      try {
+        // Parse the filters from URL
+        const parsedFilters = JSON.parse(decodeURIComponent(filtersParam));
+        
+        // Convert the parsed filters into the correct format
+        const newFilters: Record<string, Set<string>> = {};
+        Object.entries(parsedFilters).forEach(([trait, values]) => {
+          newFilters[trait] = new Set(values as string[]);
+        });
+        
+        // Update the filter state
+        setFilters(newFilters);
+      } catch (error) {
+        console.error('Error parsing filters from URL:', error);
+      }
+    }
+  }, []); // Run once on component mount
+
+  // Intersection Observer for infinite scroll
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && hasMore && !isLoadingMore) {
+      onLoadMoreAction();
+    }
+  }, [hasMore, isLoadingMore, onLoadMoreAction]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleObserver, {
+      rootMargin: '100px',
+    });
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [handleObserver]);
 
   return (
     <div className="relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="py-12 md:pt-32 md:pb-20">
-          <div className="pb-12 md:pb-14">
-            <div className="relative text-center md:text-left">
-              <h2 className="h2 font-cabinet-grotesk mb-6">
-                {searchValue 
-                  ? `${searchType === 'collection' ? 'Collection' : 'Address'}: ${searchValue}`
-                  : 'Search for NFTs'}
-              </h2>
-              
-              {/* Debug collection info */}
-              {collection && searchType === 'collection' && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                    <div>
-                      <div className="text-sm font-medium text-gray-500">Supply</div>
-                      <div className="text-lg font-semibold mt-1">
-                        {collection.minted} / {collection.max}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-500">Mint Cost</div>
-                      <div className="text-lg font-semibold mt-1 group relative cursor-help">
-                        {collection.royaltyFee 
-                          ? sompiToKAS(collection.royaltyFee, 0)
-                          : 'Free'}
-                        
-                        {/* Tooltip with full value */}
-                        {collection.royaltyFee && (
-                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block">
-                            <div className="bg-gray-900 text-white text-sm rounded py-1 px-2 whitespace-nowrap">
-                              {sompiToKAS(collection.royaltyFee)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-500">Pre-mint</div>
-                      <div className="text-lg font-semibold mt-1">
-                        {collection.premint || '0'}
-                      </div>
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <div className="text-sm font-medium text-gray-500">State</div>
-                      <div className="text-lg font-semibold mt-1">
-                        {collection.state || 'Unknown'}
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <div className="text-sm font-medium text-gray-500">Deployer</div>
-                      <div className="text-sm font-mono truncate mt-1 hover:text-clip">
-                        {collection.deployer}
-                      </div>
-                    </div>
-                    {collection.royaltyTo && (
-                      <div className="col-span-2 md:col-span-3">
-                        <div className="text-sm font-medium text-gray-500">Royalty Recipient</div>
-                        <div className="text-sm font-mono truncate mt-1 hover:text-clip">
-                          {collection.royaltyTo}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="pt-8 md:pt-12">
+          {/* Only show Address Info after search is executed */}
+          {searchType === 'address' && hasSearched && (
+            <AddressInfo
+              address={searchValue}
+              totalNFTs={nfts.length}
+              collections={Array.from(new Set(nfts.map(nft => nft.tick)))}
+            />
+          )}
+
+          {/* Show Collection Info for collection searches */}
+          {searchType === 'collection' && collection && (
+            <CollectionInfo collection={collection} />
+          )}
 
           {/* Filter Dropdowns */}
           {!isLoading && nfts.length > 0 && (
-            <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(filterOptions).map(([trait_type, options]) => (
-                <div key={trait_type}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {trait_type}
-                  </label>
-                  <Select<FilterOption, true>
-                    isMulti
-                    options={options}
-                    onChange={(selected: MultiValue<FilterOption>) => 
-                      handleFilterChange(trait_type, selected)
+            <div className="mb-8">
+              {searchType === 'address' ? (
+                <CollectionFilter
+                  collections={Array.from(new Set(nfts.map(nft => nft.tick))).map(tick => ({
+                    tick,
+                    count: nfts.filter(nft => nft.tick === tick).length
+                  }))}
+                  selectedCollections={filters['collection'] || new Set()}
+                  onChange={(selected) => {
+                    const newFilters = { ...filters };
+                    if (selected.size > 0) {
+                      newFilters['collection'] = selected;
+                    } else {
+                      delete newFilters['collection'];
                     }
-                    className="basic-multi-select"
-                    classNamePrefix="select"
-                    placeholder={`Select ${trait_type}`}
-                  />
+                    setFilters(newFilters);
+                  }}
+                />
+              ) : (
+                // Trait filters for collection search
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Object.entries(filterOptions).map(([trait_type, options]) => (
+                    <div key={trait_type}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {trait_type}
+                      </label>
+                      <Select<FilterOption, true>
+                        isMulti
+                        options={options}
+                        value={options.filter(option => 
+                          filters[trait_type]?.has(option.value)
+                        )}
+                        onChange={(selected: MultiValue<FilterOption>) => 
+                          handleFilterChange(trait_type, selected)
+                        }
+                        className="basic-multi-select"
+                        classNamePrefix="select"
+                        placeholder={`Select ${trait_type}`}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 
@@ -200,12 +248,43 @@ export default function Inspiration({
             )}
 
             {error && (
-              <div className="text-center text-red-500">
-                {error}
+              <div className="text-center py-12">
+                <div className="max-w-md mx-auto">
+                  <div className="bg-red-50 border border-red-100 rounded-lg p-6">
+                    <div className="flex items-center justify-center mb-4">
+                      <svg 
+                        className="w-8 h-8 text-red-400" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-red-800 mb-2">
+                      {searchType === 'collection' ? 'Collection Not Found' : 'Address Not Found'}
+                    </h3>
+                    <p className="text-red-600">
+                      {error}
+                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-4 text-sm text-red-600 hover:text-red-800 underline"
+                    >
+                      Try another search
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
-            {!isLoading && !error && nfts.length === 0 && searchValue && (
+            {/* No NFTs message */}
+            {!isLoading && !error && nfts.length === 0 && hasSearched && (
               <div className="text-center text-gray-500">
                 No NFTs found for this {searchType}
               </div>
@@ -214,7 +293,7 @@ export default function Inspiration({
             {/* NFT Grid */}
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredNFTs.map((nft) => (
-                <div key={nft.id} className="relative w-full" style={{ paddingBottom: '120%' }}>
+                <div key={`${nft.tick}-${nft.id}`} className="relative w-full" style={{ paddingBottom: '120%' }}>
                   <div className="absolute inset-0">
                     <NFTCard nft={nft} />
                   </div>
@@ -222,16 +301,14 @@ export default function Inspiration({
               ))}
             </div>
 
-            {/* Load More */}
-            {hasMore && nfts.length === filteredNFTs.length && (
-              <div className="mt-8 text-center">
-                <button
-                  onClick={onLoadMoreAction}
-                  disabled={isLoadingMore}
-                  className="btn text-white bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300"
-                >
-                  {isLoadingMore ? 'Loading...' : 'Load More'}
-                </button>
+            {/* Replace the Load More button with Infinite Scroll Observer */}
+            {hasMore && (
+              <div ref={observerTarget} className="h-10 mt-8">
+                {isLoadingMore && (
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
               </div>
             )}
 
