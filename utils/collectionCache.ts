@@ -28,10 +28,10 @@ export class CollectionCache {
             // Calculate rarities for the collection
             const rarities = calculateTraitRarities(data.metadata);
             
-            // Enrich metadata with rarity information - add type assertion
+            // Enrich metadata with rarity information
             const enrichedMetadata = Object.entries(data.metadata).reduce((acc, [tokenId, meta]) => ({
                 ...acc,
-                [tokenId]: enrichMetadataWithRarity(meta as NFTMetadata, rarities)
+                [tokenId]: enrichMetadataWithRarity(meta as NFTMetadata, rarities, data.metadata)
             }), {} as Record<string, NFTMetadata>);
 
             // Convert trait values back to Sets

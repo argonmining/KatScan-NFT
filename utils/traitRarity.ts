@@ -40,37 +40,52 @@ export function calculateTraitRarities(metadataMap: Record<string, NFTMetadata>)
 
 export function calculateOverallRarity(
     metadata: NFTMetadata, 
-    rarities: TraitRarity
-): number | undefined {
+    rarities: TraitRarity,
+    allMetadata: Record<string, NFTMetadata>
+): { score: number; percentile: number } | undefined {
     try {
         if (!metadata?.attributes?.length || !rarities) return undefined;
 
-        // Filter out invalid attributes
+        // Calculate rarity score for this NFT
         const validAttributes = metadata.attributes.filter(
             attr => attr?.trait_type && attr?.value && rarities[attr.trait_type]?.[attr.value]
         );
 
         if (validAttributes.length === 0) return undefined;
 
-        // Calculate statistical rarity using a more balanced approach
+        // Calculate statistical rarity
         let totalScore = 0;
-        const numTraits = validAttributes.length;
-
         validAttributes.forEach(attr => {
             const traitRarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
             if (typeof traitRarity !== 'number') return;
-
-            // Use a logarithmic scale for weighting to prevent extreme values
-            // from dominating the calculation
-            const weight = Math.log10(100 / traitRarity + 1);
-            totalScore += traitRarity * weight;
+            totalScore += traitRarity;
         });
 
-        // Calculate final score
-        const finalScore = totalScore / numTraits;
+        const score = Number((totalScore / validAttributes.length).toFixed(2));
 
-        // Return rounded to 2 decimal places
-        return Number(finalScore.toFixed(2));
+        // Calculate all scores and find percentile
+        const allScores = Object.values(allMetadata)
+            .map(nft => {
+                const attrs = nft.attributes?.filter(
+                    attr => attr?.trait_type && attr?.value && rarities[attr.trait_type]?.[attr.value]
+                ) || [];
+                
+                if (attrs.length === 0) return Infinity;
+
+                const total = attrs.reduce((sum, attr) => {
+                    const rarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
+                    return sum + (typeof rarity === 'number' ? rarity : 0);
+                }, 0);
+
+                return Number((total / attrs.length).toFixed(2));
+            })
+            .filter(s => s !== Infinity)
+            .sort((a, b) => a - b);
+
+        const index = allScores.findIndex(s => s >= score);
+        const percentile = Number(((index / allScores.length) * 100).toFixed(2));
+
+        return { score, percentile };
     } catch (error) {
         console.error('Error calculating overall rarity:', error);
         return undefined;
@@ -79,7 +94,8 @@ export function calculateOverallRarity(
 
 export function enrichMetadataWithRarity(
     metadata: NFTMetadata, 
-    rarities: TraitRarity
+    rarities: TraitRarity,
+    allMetadata: Record<string, NFTMetadata>
 ): NFTMetadata {
     try {
         if (!metadata?.attributes) return metadata;
@@ -92,12 +108,13 @@ export function enrichMetadataWithRarity(
             };
         });
 
-        const overallRarity = calculateOverallRarity(metadata, rarities);
+        const rarityInfo = calculateOverallRarity(metadata, rarities, allMetadata);
 
         return {
             ...metadata,
             attributes: enrichedAttributes,
-            overallRarity
+            overallRarity: rarityInfo?.score,
+            rarityPercentile: rarityInfo?.percentile
         };
     } catch (error) {
         console.error('Error enriching metadata with rarity:', error);

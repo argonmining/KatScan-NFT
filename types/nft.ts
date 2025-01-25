@@ -10,6 +10,7 @@ export interface NFTMetadata {
         rarity?: number;
     }>;
     overallRarity?: number;
+    rarityPercentile?: number;
 }
 
 export interface NFTDisplay {
