@@ -52,18 +52,26 @@ export function calculateOverallRarity(
 
         if (validAttributes.length === 0) return undefined;
 
-        // Calculate statistical rarity (probability of all traits occurring together)
-        const probabilityScore = validAttributes.reduce((score, attr) => {
-            const traitRarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
-            if (typeof traitRarity !== 'number') return score;
-            // Convert percentage to probability (divide by 100)
-            return score * (traitRarity / 100);
-        }, 1);
+        // Calculate rarity score using average method
+        // But weigh rarer traits more heavily
+        let weightedScore = 0;
+        let totalWeight = 0;
 
-        // Convert probability back to percentage and round to 2 decimal places
-        const rarityPercentage = probabilityScore * 100;
+        validAttributes.forEach(attr => {
+            const traitRarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
+            if (typeof traitRarity !== 'number') return;
+
+            // Weight is inverse to rarity - rarer traits have more weight
+            const weight = 100 / traitRarity;
+            weightedScore += traitRarity * weight;
+            totalWeight += weight;
+        });
+
+        // Calculate final weighted average
+        const finalScore = weightedScore / totalWeight;
         
-        return Number(rarityPercentage.toFixed(2));
+        // Return rounded to 2 decimal places
+        return Number(finalScore.toFixed(2));
     } catch (error) {
         console.error('Error calculating overall rarity:', error);
         return undefined;

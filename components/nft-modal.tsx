@@ -90,17 +90,19 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                                     <div className="mt-2">
                                                         <div className="flex items-baseline gap-2">
                                                             <span className={`text-2xl font-bold ${
-                                                                nft.metadata.overallRarity < 0.1 ? 'text-rose-500' :    // Legendary (Neon Red/Pink)
-                                                                nft.metadata.overallRarity < 0.5 ? 'text-purple-400' :  // Epic (Purple)
-                                                                nft.metadata.overallRarity < 2 ? 'text-yellow-400' :    // Rare (Yellow)
-                                                                nft.metadata.overallRarity < 5 ? 'text-teal-400' :      // Common (Teal)
-                                                                'text-gray-400'                                         // Uncommon (Grey)
+                                                                nft.metadata.overallRarity < 1 ? 'text-red-600' :      // Mythic (Crimson)
+                                                                nft.metadata.overallRarity < 5 ? 'text-amber-400' :    // Legendary (Yellow/Gold)
+                                                                nft.metadata.overallRarity < 15 ? 'text-purple-400' :  // Epic (Purple)
+                                                                nft.metadata.overallRarity < 35 ? 'text-blue-400' :    // Rare (Blue)
+                                                                nft.metadata.overallRarity < 60 ? 'text-teal-400' :    // Uncommon (Teal)
+                                                                'text-gray-400'                                        // Common (Grey)
                                                             }`}>
-                                                                {nft.metadata.overallRarity < 0.1 ? 'Legendary' :
-                                                                 nft.metadata.overallRarity < 0.5 ? 'Epic' :
-                                                                 nft.metadata.overallRarity < 2 ? 'Rare' :
-                                                                 nft.metadata.overallRarity < 5 ? 'Common' :
-                                                                 'Uncommon'}
+                                                                {nft.metadata.overallRarity < 1 ? 'Mythic' :
+                                                                 nft.metadata.overallRarity < 5 ? 'Legendary' :
+                                                                 nft.metadata.overallRarity < 15 ? 'Epic' :
+                                                                 nft.metadata.overallRarity < 35 ? 'Rare' :
+                                                                 nft.metadata.overallRarity < 60 ? 'Uncommon' :
+                                                                 'Common'}
                                                             </span>
                                                             <span className="text-sm text-gray-400">
                                                                 ({nft.metadata.overallRarity}%)
