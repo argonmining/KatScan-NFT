@@ -42,50 +42,53 @@ export function calculateOverallRarity(
     metadata: NFTMetadata, 
     rarities: TraitRarity,
     allMetadata: Record<string, NFTMetadata>
-): { score: number; percentile: number } | undefined {
+): number | undefined {
     try {
         if (!metadata?.attributes?.length || !rarities) return undefined;
 
-        // Calculate rarity score for this NFT
+        // Calculate collection-wide average rarities for each trait type
+        const traitAverages: Record<string, number> = {};
+        let totalNFTs = Object.keys(allMetadata).length;
+
+        // Calculate average rarity for each trait type across collection
+        Object.entries(rarities).forEach(([traitType, values]) => {
+            const traitSum = Object.values(values).reduce((sum, { percentage }) => sum + percentage, 0);
+            traitAverages[traitType] = traitSum / Object.keys(values).length;
+        });
+
+        // Calculate how this NFT's traits compare to collection averages
         const validAttributes = metadata.attributes.filter(
             attr => attr?.trait_type && attr?.value && rarities[attr.trait_type]?.[attr.value]
         );
 
         if (validAttributes.length === 0) return undefined;
 
-        // Calculate statistical rarity
-        let totalScore = 0;
+        let rarityScore = 0;
         validAttributes.forEach(attr => {
+            if (!attr.trait_type || !attr.value) return;
+            
             const traitRarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
-            if (typeof traitRarity !== 'number') return;
-            totalScore += traitRarity;
+            const avgRarity = traitAverages[attr.trait_type];
+            
+            if (typeof traitRarity !== 'number' || typeof avgRarity !== 'number') return;
+
+            // Calculate how much rarer this trait is compared to average
+            // Lower percentage means rarer, so we invert the comparison
+            const rarityMultiplier = avgRarity / traitRarity;
+            rarityScore += rarityMultiplier;
         });
 
-        const score = Number((totalScore / validAttributes.length).toFixed(2));
+        // Average the score across all traits
+        const finalScore = rarityScore / validAttributes.length;
+        
+        // Convert to a 0-100 scale where higher numbers mean more common
+        // We use log scale to prevent extreme values
+        const normalizedScore = Math.min(100, 
+            (100 / Math.log10(11)) * Math.log10(finalScore + 1)
+        );
 
-        // Calculate all scores and find percentile
-        const allScores = Object.values(allMetadata)
-            .map(nft => {
-                const attrs = nft.attributes?.filter(
-                    attr => attr?.trait_type && attr?.value && rarities[attr.trait_type]?.[attr.value]
-                ) || [];
-                
-                if (attrs.length === 0) return Infinity;
-
-                const total = attrs.reduce((sum, attr) => {
-                    const rarity = rarities[attr.trait_type]?.[attr.value]?.percentage;
-                    return sum + (typeof rarity === 'number' ? rarity : 0);
-                }, 0);
-
-                return Number((total / attrs.length).toFixed(2));
-            })
-            .filter(s => s !== Infinity)
-            .sort((a, b) => a - b);
-
-        const index = allScores.findIndex(s => s >= score);
-        const percentile = Number(((index / allScores.length) * 100).toFixed(2));
-
-        return { score, percentile };
+        // Return rounded to 2 decimal places
+        return Number((100 - normalizedScore).toFixed(2));
     } catch (error) {
         console.error('Error calculating overall rarity:', error);
         return undefined;
@@ -113,8 +116,8 @@ export function enrichMetadataWithRarity(
         return {
             ...metadata,
             attributes: enrichedAttributes,
-            overallRarity: rarityInfo?.score,
-            rarityPercentile: rarityInfo?.percentile
+            overallRarity: rarityInfo,
+            rarityPercentile: 0 // Assuming percentile is not available in the new calculateOverallRarity function
         };
     } catch (error) {
         console.error('Error enriching metadata with rarity:', error);
