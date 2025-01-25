@@ -291,7 +291,7 @@ export default function Inspiration({
             )}
 
             {/* NFT Grid */}
-            <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-4 lg:grid-cols-4">
               {filteredNFTs.map((nft) => (
                 <div 
                   key={`${nft.tick}-${nft.id}`} 

@@ -52,11 +52,6 @@ export default function NFTCard({ nft }: NFTCardProps) {
                                     <h3 className="text-white font-semibold truncate">
                                         {nft.metadata.name}
                                     </h3>
-                                    {nft.isMinted && (
-                                        <p className="text-white/80 text-sm truncate mt-1">
-                                            Owner: {nft.owner}
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         )}
