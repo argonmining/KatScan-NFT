@@ -37,12 +37,12 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                 <h2 className="text-xl sm:text-2xl font-bold text-white">
                                     {nft.metadata.name}
                                 </h2>
-                                <div className="flex gap-2 sm:gap-4">
+                                <div className="flex gap-2 sm:gap-4 items-center">
                                     <button
                                         onClick={() => setShowTraits(!showTraits)}
-                                        className="text-gray-400 hover:text-white transition-colors p-2"
+                                        className="text-gray-400 hover:text-white transition-colors px-3 py-1.5 text-sm"
                                     >
-                                        <ArrowPathIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                                        {showTraits ? 'Overview' : 'View Traits'}
                                     </button>
                                     <button
                                         onClick={handleClose}
@@ -82,6 +82,34 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                     {!showTraits ? (
                                         // Info View
                                         <div className="space-y-4">
+                                            {typeof nft.metadata.overallRarity === 'number' && (
+                                                <div>
+                                                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
+                                                        Rarity Ranking
+                                                    </h3>
+                                                    <div className="mt-2">
+                                                        <div className="flex items-baseline gap-2">
+                                                            <span className={`text-2xl font-bold ${
+                                                                nft.metadata.overallRarity > 90 ? 'text-purple-400' :
+                                                                nft.metadata.overallRarity > 80 ? 'text-blue-400' :
+                                                                nft.metadata.overallRarity > 70 ? 'text-green-400' :
+                                                                'text-gray-400'
+                                                            }`}>
+                                                                {nft.metadata.overallRarity > 90 ? 'Legendary' :
+                                                                 nft.metadata.overallRarity > 80 ? 'Rare' :
+                                                                 nft.metadata.overallRarity > 69 ? 'Uncommon' :
+                                                                 'Common'}
+                                                            </span>
+                                                            <span className="text-sm text-gray-400">
+                                                                ({nft.metadata.overallRarity}% Rare)
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-gray-500">
+                                                            Based on trait combination rarity
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div>
                                                 <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Description</h3>
                                                 <p className="mt-2 text-gray-200">{nft.metadata.description}</p>
@@ -98,28 +126,28 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                     ) : (
                                         // Traits View
                                         <div>
-                                            <h3 className="text-sm font-medium text-gray-400 mb-3">
+                                            <h3 className="text-sm font-medium text-gray-400 mb-2">
                                                 ATTRIBUTES
                                             </h3>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-2 gap-1.5">
                                                 {nft.metadata.attributes?.map((attr, index) => (
                                                     <div 
                                                         key={index}
-                                                        className="bg-[#1e1f2a] rounded-lg p-2.5"
+                                                        className="bg-[#1e1f2a] rounded-lg p-2.5 flex justify-between items-start"
                                                     >
-                                                        <div className="text-gray-500 text-xs uppercase">
-                                                            {attr.trait_type}
-                                                        </div>
-                                                        <div className="flex justify-between items-baseline mt-0.5">
-                                                            <span className="text-white text-sm">
+                                                        <div>
+                                                            <div className="text-gray-500 text-[11px] uppercase leading-tight">
+                                                                {attr.trait_type}
+                                                            </div>
+                                                            <div className="text-white text-[13px] mt-0.5">
                                                                 {attr.value}
-                                                            </span>
-                                                            {attr.rarity && (
-                                                                <span className="text-gray-400 text-xs">
-                                                                    {attr.rarity}%
-                                                                </span>
-                                                            )}
+                                                            </div>
                                                         </div>
+                                                        {typeof attr.rarity === 'number' && (
+                                                            <div className="text-gray-400 text-[11px] ml-2">
+                                                                {attr.rarity}%
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>

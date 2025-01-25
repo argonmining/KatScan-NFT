@@ -9,6 +9,7 @@ export interface NFTMetadata {
         value: string;
         rarity?: number;
     }>;
+    overallRarity?: number;
 }
 
 export interface NFTDisplay {
