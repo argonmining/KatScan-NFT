@@ -123,7 +123,7 @@ export default function NachoKatsPage() {
             <StatisticalInsights data={collectionData.collection_stats} />
           )}
           
-          {activeSection === 'realms' && (
+          {activeSection === 'realms' && collectionData?.collection_stats?.statistical_overview?.outliers?.Realm && (
             <RealmExplorer data={collectionData.collection_stats} />
           )}
         </motion.div>

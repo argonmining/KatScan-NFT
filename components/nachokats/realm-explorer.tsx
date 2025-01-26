@@ -10,15 +10,24 @@ import { Tab } from '@headlessui/react'
 
 interface RealmExplorerProps {
   data: {
+    images_folder_uri: string;
+    total_supply: number;
+    total_traits: number;
+    types: {
+      random: number;
+      rare: number;
+      unique: number;
+    };
     statistical_overview: {
       outliers: {
-        Realm: {
+        [key: string]: {
           statistics: {
             distribution: {
               min: number;
               max: number;
               median: number;
               quartiles: number[];
+              iqr: number;
               rarity_segments: {
                 [key: string]: number;
               };
@@ -27,6 +36,7 @@ interface RealmExplorerProps {
               mean: number;
               mode: number;
               std_dev: number;
+              variance: number;
             };
             trait_metrics: {
               unique_count: number;
@@ -34,15 +44,12 @@ interface RealmExplorerProps {
               concentration_index: number;
             };
           };
-          summary: {
-            trait_count: number;
-            outlier_count: number;
-            distribution_type: string;
-          };
+          outliers: any;
+          summary: any;
         };
       };
     };
-  }
+  };
 }
 
 const RARITY_TIERS = {
@@ -87,7 +94,7 @@ export default function RealmExplorer({ data }: RealmExplorerProps) {
   const [selectedRealm, setSelectedRealm] = useState<string>('1')
 
   const realmData = useMemo(() => {
-    const realmStats = data.statistical_overview.outliers.Realm
+    const realmStats = data.statistical_overview.outliers[selectedRealm]
 
     // Process realm distribution data with correct rarity terms
     const distribution = Object.entries(realmStats.statistics.distribution.rarity_segments)
@@ -118,7 +125,7 @@ export default function RealmExplorer({ data }: RealmExplorerProps) {
       metrics,
       realmStats
     }
-  }, [data])
+  }, [data, selectedRealm])
 
   return (
     <div className="space-y-8">
