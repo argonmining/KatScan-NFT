@@ -120,7 +120,7 @@ export default function RarityDistribution({ data }: RarityDistributionProps) {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="rarity" 
-                    tickFormatter={(value) => value.split('_').map(word => 
+                    tickFormatter={(value: string) => value.split('_').map((word: string) => 
                       word.charAt(0).toUpperCase() + word.slice(1)
                     ).join(' ')}
                   />

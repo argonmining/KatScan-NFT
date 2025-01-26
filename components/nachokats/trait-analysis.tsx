@@ -229,7 +229,7 @@ export default function TraitAnalysis({ data }: TraitAnalysisProps) {
 
       // Process rarity segments with validation
       const raritySegments = Object.entries(statistics.distribution.rarity_segments || {})
-        .map(([key, value]) => {
+        .map(([key, value]: [string, number]) => {
           if (typeof value !== 'number') {
             console.warn(`Invalid value for rarity segment ${key}:`, value);
             return null;

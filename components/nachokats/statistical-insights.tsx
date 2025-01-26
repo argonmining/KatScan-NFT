@@ -51,7 +51,11 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
 export default function StatisticalInsights({ data }: StatisticalInsightsProps) {
   const [selectedMetric, setSelectedMetric] = useState<string>('diversity')
   
-  const processedData = useMemo(() => {
+  const processedData = useMemo<{
+    distributionMetrics: Array<{name: string; value: number}>;
+    raritySegments: Array<{name: string; value: number}>;
+    statisticalMeasures: Array<{name: string; value: number}>;
+  }>(() => {
     const traitCategories = Object.entries(data.statistical_overview.outliers)
     
     // Distribution metrics across traits

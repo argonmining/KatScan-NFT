@@ -278,7 +278,7 @@ export default function RealmExplorer({ data }: RealmExplorerProps) {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {realmData.distribution.map((realm) => {
-                const total = realmData.distribution.reduce((sum, r) => sum + r.value, 0)
+                const total = realmData.distribution.reduce((sum: number, r) => sum + r.value, 0)
                 const percentage = ((realm.value / total) * 100).toFixed(1)
                 return (
                   <tr key={realm.name} className="hover:bg-gray-50">
