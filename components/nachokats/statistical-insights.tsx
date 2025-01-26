@@ -15,7 +15,6 @@ import {
 interface StatisticalInsightsProps {
   data: {
     statistical_overview: {
-      trait_distribution: any;
       outliers: {
         [key: string]: {
           statistics: {
@@ -79,20 +78,10 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
       stdDev: info.statistics.central_tendency.std_dev
     }))
 
-    // Trait correlations (using radar chart format)
-    const traitCorrelations = traitCategories.map(([category, info]) => ({
-      category,
-      diversity: info.statistics.trait_metrics.diversity_score,
-      rarity: 100 - info.statistics.trait_metrics.concentration_index,
-      uniqueness: (info.statistics.trait_metrics.unique_count / 100) * 100,
-      variance: Math.min(info.statistics.central_tendency.variance / 1000, 100)
-    }))
-
     return {
       distributionMetrics,
       raritySegments,
-      statisticalMeasures,
-      traitCorrelations
+      statisticalMeasures
     }
   }, [data])
 

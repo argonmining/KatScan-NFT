@@ -10,6 +10,8 @@ import {
 import { Tab } from '@headlessui/react'
 import { TooltipWrapper, TooltipHeader, TooltipRow } from './shared/tooltips'
 import { ChartBarIcon, ChartPieIcon, BeakerIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline'
+import { ChartErrorBoundary } from './shared/chart-error-boundary'
+import Card from './shared/card'
 
 interface TraitAnalysisProps {
   data: {
@@ -48,30 +50,30 @@ interface TraitAnalysisProps {
 }
 
 const RARITY_TIERS = {
-  common: {
-    color: '#868E96',
-    label: 'Common',
-    description: 'Frequently occurring traits (>35%)'
-  },
-  uncommon: {
-    color: '#51CF66',
-    label: 'Uncommon',
-    description: 'Less common traits (15-35%)'
-  },
-  rare: {
-    color: '#4DABF7',
-    label: 'Rare',
-    description: 'Uncommon traits (5-15%)'
+  legendary: {
+    color: '#FF6B6B',
+    label: 'Legendary',
+    description: 'Extremely rare traits (<1%)'
   },
   epic: {
     color: '#9775FA',
     label: 'Epic',
     description: 'Very rare traits (1-5%)'
   },
-  legendary: {
-    color: '#FF6B6B',
-    label: 'Legendary',
-    description: 'Extremely rare traits (< 1%)'
+  rare: {
+    color: '#4DABF7',
+    label: 'Rare',
+    description: 'Rare traits (5-15%)'
+  },
+  uncommon: {
+    color: '#51CF66',
+    label: 'Uncommon',
+    description: 'Less common traits (15-35%)'
+  },
+  common: {
+    color: '#868E96',
+    label: 'Common',
+    description: 'Frequently occurring traits (>35%)'
   }
 } as const
 
@@ -82,33 +84,40 @@ const getFormattedTierLabel = (value: string) => {
   return RARITY_TIERS[value as keyof typeof RARITY_TIERS].label;
 }
 
-const CustomTooltip = ({ active, payload, label, category }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const data = payload[0].payload;
 
   return (
     <TooltipWrapper>
       <TooltipHeader 
-        title={category}
-        subtitle={`Trait: ${label}`}
+        title={data.name}
+        subtitle={data.description}
       />
-      <div className="space-y-1">
+      <div className="space-y-2">
         <TooltipRow 
-          label="Count"
-          value={data.value}
+          label="Total Traits"
+          value={data.total}
           highlight
         />
-        <TooltipRow 
-          label="Percentage"
-          value={`${((data.value / data.total) * 100).toFixed(2)}%`}
-        />
-        <TooltipRow 
-          label="Rarity Tier"
-          value={RARITY_TIERS[data.rarityTier].label}
-        />
-        <div className="mt-2 text-xs text-gray-500">
-          {RARITY_TIERS[data.rarityTier].description}
-        </div>
+        {data.traits.length > 0 && (
+          <div className="mt-2">
+            <div className="text-sm font-medium text-gray-600 mb-1">Traits:</div>
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {data.traits.map((trait: any, index: number) => (
+                <div 
+                  key={index} 
+                  className="text-sm flex justify-between items-center"
+                >
+                  <span className="text-gray-600 mr-4">{trait.trait}</span>
+                  <span className="text-gray-900 font-medium">
+                    {trait.rarity.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </TooltipWrapper>
   );
@@ -147,295 +156,302 @@ const StatisticsTooltip = ({ active, payload }: any) => {
   );
 };
 
+// Add this wrapper function for consistent error handling
+const ChartContainer = ({ children }: { children: React.ReactNode }) => (
+  <ChartErrorBoundary>
+    <div className="h-[400px] w-full">
+      <ResponsiveContainer>
+        {children as React.ReactElement}
+      </ResponsiveContainer>
+    </div>
+  </ChartErrorBoundary>
+)
+
+// First, add this helper function to determine rarity tier
+const getRarityTier = (percentage: number): keyof typeof RARITY_TIERS => {
+  if (percentage < 1) return 'legendary';
+  if (percentage < 5) return 'epic';
+  if (percentage < 15) return 'rare';
+  if (percentage < 35) return 'uncommon';
+  return 'common';
+};
+
 export default function TraitAnalysis({ data }: TraitAnalysisProps) {
-  const [selectedCategory, setSelectedCategory] = useState(Object.keys(data)[0])
+  const [selectedCategory, setSelectedCategory] = useState(() => 
+    data && Object.keys(data).length > 0 ? Object.keys(data)[0] : ''
+  )
   const [selectedView, setSelectedView] = useState('distribution')
 
   const processedData = useMemo(() => {
-    try {
-      const categoryData = data[selectedCategory];
-      const total = Object.values(categoryData.statistics.distribution.rarity_segments)
-        .reduce((a, b) => a + b, 0);
-
-      // Distribution data
-      const getRarityTier = (percentage: number): keyof typeof RARITY_TIERS => {
-        if (percentage < 1) return 'legendary'
-        if (percentage < 5) return 'epic'
-        if (percentage < 15) return 'rare'
-        if (percentage < 35) return 'uncommon'
-        return 'common'
-      }
-
-      const distribution = Object.entries(categoryData.statistics.distribution.rarity_segments)
-        .map(([tier, count]) => {
-          const percentage = (count / total) * 100
-          const rarityTier = getRarityTier(percentage)
-          return {
-            name: tier,
-            value: count,
-            total,
-            rarityTier,
-            percentage
-          }
-        })
-        .sort((a, b) => b.value - a.value);
-
-      // Statistical metrics
-      const statistics = {
-        mean: categoryData.statistics.central_tendency.mean,
-        median: categoryData.statistics.distribution.median,
-        std_dev: categoryData.statistics.central_tendency.std_dev,
-        diversity_score: categoryData.statistics.trait_metrics.diversity_score,
-        concentration_index: categoryData.statistics.trait_metrics.concentration_index,
-        quartiles: categoryData.statistics.distribution.quartiles
-      };
-
-      // Distribution curve data
-      const distributionCurve = Array.from({ length: 100 }, (_, i) => {
-        const x = i;
-        const y = (1 / (statistics.std_dev * Math.sqrt(2 * Math.PI))) * 
-                  Math.exp(-0.5 * Math.pow((x - statistics.mean) / statistics.std_dev, 2));
-        return { x, y };
-      });
-
-      // Radar chart data
-      const radarData = [{
-        category: selectedCategory,
-        diversity: statistics.diversity_score,
-        concentration: statistics.concentration_index,
-        variance: Math.min(100, (statistics.std_dev / statistics.mean) * 100),
-        uniqueness: (categoryData.statistics.trait_metrics.unique_count / total) * 100
-      }];
-
+    if (!data || !selectedCategory || !data[selectedCategory]) {
       return {
-        distribution,
-        statistics,
-        distributionCurve,
-        radarData
-      };
-    } catch (error) {
-      console.error('Error processing trait data:', error);
-      // Return default/empty data structure
-      return {
-        distribution: [],
         statistics: {
           mean: 0,
           median: 0,
+          mode: 0,
           std_dev: 0,
           diversity_score: 0,
-          concentration_index: 0,
-          quartiles: []
+          concentration_index: 0
         },
         distributionCurve: [],
-        radarData: []
+        radarData: [],
+        traitDistribution: []
       };
     }
-  }, [data, selectedCategory]);
 
-  // Add error boundary for the entire component
-  if (!data || !selectedCategory || !data[selectedCategory]) {
+    try {
+      const categoryData = data[selectedCategory];
+      const { statistics, outliers } = categoryData;
+
+      // Process traits by rarity tier using the rarity_segments
+      const traitDistribution = Object.entries(RARITY_TIERS).map(([tier, config]) => {
+        const segmentCount = statistics.distribution.rarity_segments[tier] || 0;
+        const traitList = Object.entries(outliers || {})
+          .filter(([_, rarity]) => {
+            const percentage = rarity * 100;
+            const traitTier = getRarityTier(percentage);
+            return traitTier === tier;
+          })
+          .map(([trait, rarity]) => ({
+            trait,
+            rarity: rarity * 100
+          }))
+          .sort((a, b) => a.rarity - b.rarity);
+
+        return {
+          name: config.label,
+          color: config.color,
+          traits: traitList,
+          total: segmentCount,
+          description: config.description
+        };
+      });
+
+      // Process rarity segments with validation
+      const raritySegments = Object.entries(statistics.distribution.rarity_segments || {})
+        .map(([key, value]) => {
+          if (typeof value !== 'number') {
+            console.warn(`Invalid value for rarity segment ${key}:`, value);
+            return null;
+          }
+          return {
+            name: key,
+            value,
+            color: RARITY_TIERS[key as keyof typeof RARITY_TIERS]?.color || '#868E96'
+          };
+        })
+        .filter((segment): segment is NonNullable<typeof segment> => segment !== null);
+
+      // Validate statistical values
+      const validatedStats = {
+        mean: Number(statistics.central_tendency.mean) || 0,
+        median: Number(statistics.distribution.median) || 0,
+        mode: Number(statistics.central_tendency.mode) || 0,
+        std_dev: Number(statistics.central_tendency.std_dev) || 0,
+        diversity_score: Number(statistics.trait_metrics.diversity_score) || 0,
+        concentration_index: Number(statistics.trait_metrics.concentration_index) || 0
+      };
+
+      // Create distribution curve data with validation
+      const distributionCurve = Array.from({ length: 100 }, (_, i) => {
+        const x = i;
+        const mean = validatedStats.mean;
+        const stdDev = validatedStats.std_dev;
+        
+        if (stdDev === 0) return { x, y: 0 };
+        
+        const y = Math.exp(-(Math.pow(x - mean, 2) / (2 * Math.pow(stdDev, 2))));
+        return { x, y };
+      });
+
+      // Update the radar data calculation to not rely on summary
+      const radarData = [
+        {
+          metric: 'Diversity',
+          value: statistics.trait_metrics.diversity_score,
+          fullMark: 100
+        },
+        {
+          metric: 'Uniqueness',
+          value: (statistics.trait_metrics.unique_count / 
+            Object.keys(outliers || {}).length) * 100,
+          fullMark: 100
+        },
+        {
+          metric: 'Rarity',
+          value: (1 - statistics.trait_metrics.concentration_index) * 100,
+          fullMark: 100
+        }
+      ];
+
+      console.log('Processed data for category:', selectedCategory, {
+        statistics: validatedStats,
+        raritySegments,
+        radarData
+      });
+
+      return {
+        statistics: validatedStats,
+        distributionCurve,
+        radarData,
+        raritySegments,
+        traitDistribution
+      };
+    } catch (error) {
+      console.error('Error processing data:', error);
+      return {
+        statistics: {
+          mean: 0,
+          median: 0,
+          mode: 0,
+          std_dev: 0,
+          diversity_score: 0,
+          concentration_index: 0
+        },
+        distributionCurve: [],
+        radarData: [],
+        traitDistribution: []
+      };
+    }
+  }, [data, selectedCategory])
+
+  if (!data || Object.keys(data).length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="text-center text-gray-500">
           <p>No trait data available</p>
         </div>
       </div>
-    );
+    )
   }
-
-  const viewOptions = [
-    { id: 'distribution', name: 'Distribution', icon: ChartBarIcon },
-    { id: 'statistics', name: 'Statistics', icon: BeakerIcon },
-    { id: 'patterns', name: 'Patterns', icon: ChartPieIcon },
-    { id: 'trends', name: 'Trends', icon: ArrowTrendingUpIcon }
-  ];
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Category Selection */}
+      {/* Category Selection */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Trait Categories</h3>
-          <Tab.Group onChange={setSelectedCategory}>
-            <Tab.List className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
-              {Object.keys(data).map((category) => (
-                <Tab
-                  key={category}
-                  className={({ selected }) => `
-                    px-4 py-3 rounded-xl text-sm font-medium transition-all
-                    ${selected 
-                      ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-700/10' 
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }
-                  `}
-                >
-                  <div className="flex flex-col items-center space-y-1">
-                    <span>{category}</span>
-                    <span className="text-xs opacity-75">
-                      {data[category].statistics.trait_metrics.unique_count} variations
-                    </span>
-                  </div>
-                </Tab>
-              ))}
-            </Tab.List>
-          </Tab.Group>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Trait Categories</h3>
+        <Tab.Group 
+          selectedIndex={Object.keys(data).indexOf(selectedCategory)}
+          onChange={(index) => {
+            const categories = Object.keys(data);
+            const newCategory = categories[index];
+            if (newCategory) {
+              setSelectedCategory(newCategory);
+            }
+          }}
+        >
+          <Tab.List className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            {Object.keys(data).map((category) => (
+              <Tab
+                key={category}
+                className={({ selected }) => `
+                  px-4 py-3 rounded-xl text-sm font-medium transition-all
+                  ${selected 
+                    ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-700/10' 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }
+                `}
+              >
+                <div className="flex flex-col items-center space-y-1">
+                  <span>{category}</span>
+                  <span className="text-xs opacity-75">
+                    {data[category].statistics.trait_metrics.unique_count} variations
+                  </span>
+                </div>
+              </Tab>
+            ))}
+          </Tab.List>
+        </Tab.Group>
       </div>
 
       {/* View Selection */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="flex space-x-2">
-          {viewOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setSelectedView(option.id)}
-              className={`
-                flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${selectedView === option.id
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }
-              `}
-            >
-              <option.icon className="h-5 w-5" />
-              <span>{option.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Distribution Chart (existing, enhanced styling) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <Tab.Group 
+          selectedIndex={selectedView === 'distribution' ? 0 : 1}
+          onChange={(index) => setSelectedView(index === 0 ? 'distribution' : 'statistics')}
         >
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Distribution for {selectedCategory}
-            </h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer>
-                <BarChart data={processedData.distribution}>
+          <Tab.List className="flex space-x-4">
+            <Tab className={({ selected }) => `
+              px-4 py-2 rounded-lg text-sm font-medium transition-all
+              ${selected 
+                ? 'bg-blue-50 text-blue-700' 
+                : 'text-gray-500 hover:text-gray-700'
+              }
+            `}>
+              Distribution
+            </Tab>
+            <Tab className={({ selected }) => `
+              px-4 py-2 rounded-lg text-sm font-medium transition-all
+              ${selected 
+                ? 'bg-blue-50 text-blue-700' 
+                : 'text-gray-500 hover:text-gray-700'
+              }
+            `}>
+              Statistics
+            </Tab>
+          </Tab.List>
+
+          <Tab.Panels className="mt-6">
+            <Tab.Panel>
+              <ChartContainer>
+                <BarChart 
+                  data={processedData.traitDistribution}
+                  margin={{ top: 20, right: 30, left: 40, bottom: 60 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                   <XAxis 
                     dataKey="name"
-                    tick={{ fill: '#6B7280', fontSize: 12 }}
-                    tickFormatter={getFormattedTierLabel}
+                    interval={0}
+                    tick={{ fontSize: 12 }}
+                    height={60}
+                    angle={-45}
+                    textAnchor="end"
                   />
                   <YAxis 
-                    tick={{ fill: '#6B7280', fontSize: 12 }}
                     label={{ 
-                      value: 'Count',
-                      angle: -90,
+                      value: 'Number of Traits', 
+                      angle: -90, 
                       position: 'insideLeft',
-                      style: { fill: '#6B7280' }
+                      style: { textAnchor: 'middle' }
                     }}
                   />
-                  <Tooltip content={(props) => 
-                    <CustomTooltip {...props} category={selectedCategory} />
-                  } />
-                  <Bar dataKey="value">
-                    {processedData.distribution.map((entry, index) => (
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey="total"
+                    radius={[4, 4, 0, 0]}
+                  >
+                    {processedData.traitDistribution.map((entry, index) => (
                       <Cell 
-                        key={`cell-${index}`}
-                        fill={RARITY_TIERS[entry.rarityTier].color}
+                        key={`cell-${index}`} 
+                        fill={entry.color}
                       />
                     ))}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </motion.div>
+              </ChartContainer>
+            </Tab.Panel>
 
-        {/* Statistical Pattern Analysis */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
-        >
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Pattern Analysis
-            </h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer>
-                <RadarChart data={processedData.radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" />
-                  <PolarRadiusAxis />
-                  <Radar
-                    name="Metrics"
-                    dataKey="value"
-                    stroke="#3B82F6"
-                    fill="#3B82F6"
-                    fillOpacity={0.6}
-                  />
-                  <Tooltip content={<StatisticsTooltip />} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Distribution Curve */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
-        >
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Distribution Curve
-            </h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer>
-                <AreaChart data={processedData.distributionCurve}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="x" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="y"
-                    stroke="#3B82F6"
-                    fill="#3B82F6"
-                    fillOpacity={0.2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Statistical Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
-        >
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Statistical Summary
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              {Object.entries(processedData.statistics).map(([key, value]) => (
-                <div key={key} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="text-sm font-medium text-gray-500">
-                    {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                  </div>
-                  <div className="mt-1 text-2xl font-bold text-gray-900">
-                    {typeof value === 'number' ? value.toFixed(2) : value}
-                  </div>
+            <Tab.Panel>
+              <ChartContainer>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(processedData.statistics).map(([key, value]) => (
+                    <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="text-sm font-medium text-gray-500">
+                        {key.split('_').map(word => 
+                          word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(' ')}
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-gray-900">
+                        {typeof value === 'number' ? value.toFixed(2) : value}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
+              </ChartContainer>
+            </Tab.Panel>
+          </Tab.Panels>
+        </Tab.Group>
       </div>
     </div>
-  );
+  )
 } 

@@ -22,7 +22,29 @@ interface CollectionData {
     statistical_overview: {
       outliers: {
         [key: string]: {
-          statistics: any;
+          statistics: {
+            distribution: {
+              min: number;
+              max: number;
+              median: number;
+              quartiles: number[];
+              iqr: number;
+              rarity_segments: {
+                [key: string]: number;
+              };
+            };
+            central_tendency: {
+              mean: number;
+              mode: number;
+              std_dev: number;
+              variance: number;
+            };
+            trait_metrics: {
+              unique_count: number;
+              diversity_score: number;
+              concentration_index: number;
+            };
+          };
           outliers: any;
           summary: any;
         };
