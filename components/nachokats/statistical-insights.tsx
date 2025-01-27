@@ -19,20 +19,15 @@ interface StatisticalInsightsProps {
         [key: string]: {
           statistics: {
             distribution: {
-              min: number;
-              max: number;
-              median: number;
-              quartiles: number[];
-              iqr: number;
               rarity_segments: {
                 [key: string]: number;
               };
             };
             central_tendency: {
               mean: number;
+              median: number;
               mode: number;
               std_dev: number;
-              variance: number;
             };
             trait_metrics: {
               unique_count: number;
@@ -52,41 +47,49 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
   const [selectedMetric, setSelectedMetric] = useState<string>('diversity')
   
   const processedData = useMemo<{
-    distributionMetrics: Array<{name: string; value: number}>;
-    raritySegments: Array<{name: string; value: number}>;
-    statisticalMeasures: Array<{name: string; value: number}>;
+    distributionMetrics: Array<{ name: string; value: number }>;
+    raritySegments: Array<{ name: string; value: number }>;
+    statisticalMeasures: Array<{ name: string; value: number }>;
+    traitCorrelations: Array<{ category: string; diversity: number; rarity: number }>;
   }>(() => {
-    const traitCategories = Object.entries(data.statistical_overview.outliers)
+    const traitCategories = Object.entries(data.statistical_overview.outliers);
     
     // Distribution metrics across traits
-    const distributionMetrics = traitCategories.map(([category, info]) => ({
-      name: category,
-      diversity: info.statistics.trait_metrics.diversity_score,
-      concentration: info.statistics.trait_metrics.concentration_index,
-      uniqueCount: info.statistics.trait_metrics.unique_count,
-      standardDeviation: info.statistics.central_tendency.std_dev
-    }))
+    const distributionMetrics = traitCategories.map(([name, info]) => ({
+      name,
+      value: info.statistics.trait_metrics.diversity_score || 0
+    }));
 
-    // Rarity segment distribution
-    const raritySegments = traitCategories.map(([category, info]) => ({
-      name: category,
-      ...info.statistics.distribution.rarity_segments
-    }))
+    // Rarity segments
+    const raritySegments = Object.entries(
+      traitCategories[0]?.[1].statistics.distribution.rarity_segments || {}
+    ).map(([name, value]) => ({
+      name,
+      value: value || 0
+    }));
 
     // Statistical measures
-    const statisticalMeasures = traitCategories.map(([category, info]) => ({
-      name: category,
-      mean: info.statistics.central_tendency.mean,
-      median: info.statistics.distribution.median,
-      mode: info.statistics.central_tendency.mode,
-      stdDev: info.statistics.central_tendency.std_dev
-    }))
+    const firstCategory = traitCategories[0]?.[1].statistics.central_tendency;
+    const statisticalMeasures = [
+      { name: 'Mean', value: firstCategory?.mean || 0 },
+      { name: 'Median', value: firstCategory?.median || 0 },
+      { name: 'Mode', value: firstCategory?.mode || 0 },
+      { name: 'Standard Deviation', value: firstCategory?.std_dev || 0 }
+    ];
+
+    // Add trait correlations calculation
+    const traitCorrelations = traitCategories.map(([category, info]) => ({
+      category,
+      diversity: info.statistics.trait_metrics.diversity_score || 0,
+      rarity: info.statistics.trait_metrics.concentration_index * 100 || 0
+    }));
 
     return {
       distributionMetrics,
       raritySegments,
-      statisticalMeasures
-    }
+      statisticalMeasures,
+      traitCorrelations
+    };
   }, [data])
 
   const insights = useMemo(() => [
@@ -97,13 +100,13 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
         {
           label: 'Most Diverse Category',
           value: processedData.distributionMetrics
-            .reduce((prev, curr) => prev.diversity > curr.diversity ? prev : curr).name,
+            .reduce((prev, curr) => prev.value > curr.value ? prev : curr).name,
           detail: 'Highest trait variation'
         },
         {
           label: 'Most Concentrated Category',
           value: processedData.distributionMetrics
-            .reduce((prev, curr) => prev.concentration > curr.concentration ? prev : curr).name,
+            .reduce((prev, curr) => prev.value > curr.value ? prev : curr).name,
           detail: 'Highest trait concentration'
         }
       ]
@@ -115,14 +118,14 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
         {
           label: 'Highest Variance',
           value: processedData.statisticalMeasures
-            .reduce((prev, curr) => prev.stdDev > curr.stdDev ? prev : curr).name,
+            .reduce((prev, curr) => prev.value > curr.value ? prev : curr).name,
           detail: 'Most spread in distribution'
         },
         {
           label: 'Most Balanced',
           value: processedData.statisticalMeasures
             .reduce((prev, curr) => 
-              Math.abs(curr.mean - curr.median) < Math.abs(prev.mean - prev.median) ? curr : prev
+              Math.abs(curr.value - processedData.statisticalMeasures[1].value) < Math.abs(prev.value - processedData.statisticalMeasures[1].value) ? curr : prev
             ).name,
           detail: 'Closest to normal distribution'
         }
@@ -174,8 +177,7 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="diversity" fill="#3B82F6" name="Diversity Score" />
-                <Bar dataKey="concentration" fill="#10B981" name="Concentration Index" />
+                <Bar dataKey="value" fill="#3B82F6" name="Diversity Score" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -189,26 +191,18 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Trait Category Analysis</h3>
           <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={processedData.traitCorrelations}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="category" />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                <Radar
-                  name="Diversity"
-                  dataKey="diversity"
-                  stroke="#3B82F6"
-                  fill="#3B82F6"
-                  fillOpacity={0.6}
-                />
-                <Radar
-                  name="Rarity"
-                  dataKey="rarity"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.6}
-                />
+              <BarChart data={processedData.distributionMetrics}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
                 <Legend />
-              </RadarChart>
+                <Bar 
+                  dataKey="value" 
+                  fill="#3B82F6" 
+                  name="Distribution Score"
+                />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
@@ -231,23 +225,9 @@ export default function StatisticalInsights({ data }: StatisticalInsightsProps) 
               <Legend />
               <Line 
                 type="monotone" 
-                dataKey="mean" 
+                dataKey="value" 
                 stroke="#3B82F6" 
-                name="Mean"
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="median" 
-                stroke="#10B981" 
-                name="Median"
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="mode" 
-                stroke="#F59E0B" 
-                name="Mode"
+                name="Value"
                 strokeWidth={2}
               />
             </LineChart>
