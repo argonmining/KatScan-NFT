@@ -1,6 +1,44 @@
-import { Theme } from 'recharts'
+// Define our own theme type without relying on recharts
+interface ChartColors {
+  [key: string]: string;
+}
 
-export const chartTheme: Theme = {
+interface ChartTheme {
+  colors: string[];
+  backgroundColor: string;
+  fontFamily: string;
+  fontSize: number;
+  axis: {
+    domain: {
+      line: {
+        stroke: string;
+        strokeWidth: number;
+      };
+    };
+    tick: {
+      line: {
+        stroke: string;
+        strokeWidth: number;
+      };
+    };
+    text: {
+      fill: string;
+    };
+  };
+  grid: {
+    line: {
+      stroke: string;
+      strokeWidth: number;
+    };
+  };
+  legend: {
+    text: {
+      fill: string;
+    };
+  };
+}
+
+export const chartTheme: ChartTheme = {
   colors: ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'],
   backgroundColor: '#ffffff',
   fontFamily: 'Inter var, sans-serif',
