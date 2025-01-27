@@ -64,7 +64,7 @@ export async function fetchCollectionNFTs(
                     Array.from({ length: batchEnd - i }, async (_, index) => {
                         const tokenId = (i + index + 1).toString();
                         try {
-                            const metadata = await getIPFSContent(`${buri}/${tokenId}.json`);
+                            const metadata = await fetchMetadataWithFallback(buri, tokenId);
                             if (metadata) {
                                 if (metadata.image?.startsWith('ipfs://')) {
                                     const imageHash = metadata.image.replace('ipfs://', '');
@@ -204,6 +204,21 @@ function hasImageExtension(uri: string): boolean {
     return imageExtensions.some(ext => uri.toLowerCase().endsWith(ext));
 }
 
+async function fetchMetadataWithFallback(baseUri: string, tokenId: string): Promise<any> {
+    try {
+        // First try with .json extension
+        return await getIPFSContent(`${baseUri}/${tokenId}.json`);
+    } catch (error) {
+        // If that fails, try without .json extension
+        try {
+            return await getIPFSContent(`${baseUri}/${tokenId}`);
+        } catch (secondError) {
+            console.error(`Failed to fetch metadata for token ${tokenId} with both attempts:`, secondError);
+            throw secondError;
+        }
+    }
+}
+
 export async function fetchAddressNFTs(
     address: string,
     params?: { limit?: number; offset?: string }
@@ -234,12 +249,11 @@ export async function fetchAddressNFTs(
                 const metadataMap: Record<string, NFTMetadata> = {};
                 for (const token of tokens) {
                     try {
-                        const metadata = await getIPFSContent(`${collectionResponse.result.buri}/${token.tokenId}.json`);
+                        const metadata = await fetchMetadataWithFallback(collectionResponse.result.buri, token.tokenId);
                         if (metadata) {
                             // Process image URL if it's an IPFS URL
                             if (metadata.image && metadata.image.startsWith('ipfs://')) {
                                 const imageHash = metadata.image.replace('ipfs://', '');
-                                // Don't append .png if the image already has an extension
                                 metadata.imageUrl = `/api/ipfs/${imageHash}`;
                             }
                             metadataMap[token.tokenId] = metadata;
