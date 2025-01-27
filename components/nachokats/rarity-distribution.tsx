@@ -270,7 +270,9 @@ export default function RarityDistribution({ data }: RarityDistributionProps) {
         </Card>
 
         <Card title="Statistical Highlights">
-          {/* Add statistical highlights here */}
+          <div className="p-4 text-gray-500 text-sm">
+            No statistical highlights available
+          </div>
         </Card>
       </div>
     </div>

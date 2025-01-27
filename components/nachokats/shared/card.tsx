@@ -6,7 +6,7 @@ import { ReactNode } from 'react'
 interface CardProps {
   title?: string;
   subtitle?: string;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
   gradient?: boolean;
 }
