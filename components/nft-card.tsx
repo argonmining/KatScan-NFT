@@ -11,18 +11,27 @@ interface NFTCardProps {
 
 export default function NFTCard({ nft }: NFTCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [imageHeight, setImageHeight] = useState<number>(0);
 
     const handleCloseAction = async () => {
         setIsModalOpen(false);
     };
 
+    // Add image load handler to get natural dimensions
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.target as HTMLImageElement;
+        const aspectRatio = (img.naturalHeight / img.naturalWidth) * 100;
+        setImageHeight(aspectRatio);
+    };
+
     return (
         <>
             <div 
-                className="flip-card w-full h-full cursor-pointer"
+                className="flip-card w-full cursor-pointer"
+                style={{ paddingBottom: `${imageHeight}%` }} // Dynamic padding based on image
                 onClick={() => setIsModalOpen(true)}
             >
-                <div className="flip-card-inner relative w-full h-full">
+                <div className="flip-card-inner absolute inset-0">
                     {/* Front of card */}
                     <div className="flip-card-front absolute w-full h-full">
                         {nft.metadata.imageUrl && (
@@ -33,7 +42,8 @@ export default function NFTCard({ nft }: NFTCardProps) {
                                         <img
                                             src={nft.metadata.imageUrl}
                                             alt={nft.metadata.name}
-                                            className="rounded-md max-h-full max-w-full w-auto h-auto object-cover"
+                                            className="rounded-md w-full h-full object-contain"
+                                            onLoad={handleImageLoad}
                                         />
                                     </div>
                                 </div>

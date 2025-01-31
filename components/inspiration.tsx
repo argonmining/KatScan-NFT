@@ -297,12 +297,9 @@ export default function Inspiration({
               {filteredNFTs.map((nft) => (
                 <div 
                   key={`${nft.tick}-${nft.id}`} 
-                  className="relative w-full" 
-                  style={{ paddingBottom: '120%' }}
+                  className="relative w-full h-fit"
                 >
-                  <div className="absolute inset-0">
-                    <NFTCard nft={nft} />
-                  </div>
+                  <NFTCard nft={nft} />
                 </div>
               ))}
             </div>
