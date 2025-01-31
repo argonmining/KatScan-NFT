@@ -40,10 +40,8 @@ export async function fetchCollectionNFTs(
             throw new Error('Collection has no metadata URI');
         }
 
-        // Create owners map for quick lookup - handle the response type correctly
-        const ownersByTokenId = new Map(
-            Object.entries(ownersResponse.result || {}).map(([tokenId, owner]) => [tokenId, owner])
-        );
+        // Log the buri to verify we're getting it
+        console.log('Collection base URI:', buri);
 
         const totalSupply = parseInt(max);
         const limit = params?.limit || DISPLAY_LIMIT;
@@ -53,17 +51,21 @@ export async function fetchCollectionNFTs(
         let cachedCollection = await CollectionCache.getCollection(tick);
         
         if (!cachedCollection) {
-            console.log('Fetching all metadata for collection:', tick);
+            console.log('Fetching metadata for collection:', tick);
             const metadataMap: Record<string, NFTMetadata> = {};
             
-            // Create metadata fetch batches
+            // Create metadata fetch batches with smaller batch size for testing
+            const BATCH_SIZE = 50; // Reduced batch size for testing
             const batchPromises = [];
+            
             for (let i = 0; i < totalSupply; i += BATCH_SIZE) {
                 const batchEnd = Math.min(i + BATCH_SIZE, totalSupply);
                 const batchPromise = Promise.all(
                     Array.from({ length: batchEnd - i }, async (_, index) => {
                         const tokenId = (i + index + 1).toString();
                         try {
+                            // Log each metadata fetch attempt
+                            console.log(`Fetching metadata for token ${tokenId}`);
                             const metadata = await fetchMetadataWithFallback(buri, tokenId);
                             if (metadata) {
                                 if (metadata.image?.startsWith('ipfs://')) {
@@ -81,7 +83,7 @@ export async function fetchCollectionNFTs(
                 batchPromises.push(batchPromise);
             }
 
-            // Process all batches concurrently with increased concurrency
+            // Process all batches
             const batchResults = await Promise.all(batchPromises);
             
             // Process results and combine with ownership data
@@ -91,21 +93,21 @@ export async function fetchCollectionNFTs(
                 }
             });
 
+            // Log the metadata map size
+            console.log('Fetched metadata count:', Object.keys(metadataMap).length);
+
             await CollectionCache.setCollection(tick, metadataMap);
             cachedCollection = await CollectionCache.getCollection(tick);
-        } else {
-            // Process cached metadata images
-            Object.values(cachedCollection.metadata).forEach(metadata => {
-                if (metadata.image && metadata.image.startsWith('ipfs://') && !metadata.imageUrl) {
-                    const imageHash = metadata.image.replace('ipfs://', '');
-                    metadata.imageUrl = `/api/ipfs/${imageHash}`;
-                }
-            });
         }
 
-        if (!cachedCollection) {
+        if (!cachedCollection || !Object.keys(cachedCollection.metadata).length) {
+            console.error('No metadata found for collection');
             throw new Error('Failed to load collection metadata');
         }
+
+        // Log the cached collection size
+        console.log('Cached collection metadata count:', 
+            Object.keys(cachedCollection.metadata).length);
 
         // Apply filters if any
         let filteredTokenIds = Object.keys(cachedCollection.metadata);
@@ -206,16 +208,15 @@ function hasImageExtension(uri: string): boolean {
 
 async function fetchMetadataWithFallback(baseUri: string, tokenId: string): Promise<any> {
     try {
-        // First try with .json extension
-        return await getIPFSContent(`${baseUri}/${tokenId}.json`);
+        const uri = `${baseUri}/${tokenId}`;
+        console.log('Fetching metadata from:', uri);
+        
+        const metadata = await getIPFSContent(uri);
+        console.log('Metadata received:', metadata);
+        return metadata;
     } catch (error) {
-        // If that fails, try without .json extension
-        try {
-            return await getIPFSContent(`${baseUri}/${tokenId}`);
-        } catch (secondError) {
-            console.error(`Failed to fetch metadata for token ${tokenId} with both attempts:`, secondError);
-            throw secondError;
-        }
+        console.error(`Failed to fetch metadata for token ${tokenId}:`, error);
+        throw error;
     }
 }
 

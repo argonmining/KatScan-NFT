@@ -9,67 +9,91 @@ const GATEWAYS = [
     'https://gateway.ipfs.io'
 ];
 
+const FETCH_TIMEOUT = 5000; // 5 second timeout per gateway attempt
+
 function hasImageExtension(path: string): boolean {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
     return imageExtensions.some(ext => path.toLowerCase().endsWith(ext));
 }
 
+async function fetchWithTimeout(url: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+    }
+}
+
 export async function GET(request: NextRequest) {
     try {
         const url = new URL(request.url);
-        const path = url.pathname.split('/').filter(Boolean).slice(2).join('/');
+        const pathSegments = url.pathname.split('/').filter(Boolean).slice(2);
         
-        // If path doesn't have an extension and doesn't end in .json, treat as image
-        const isImage = !path.endsWith('.json') && (!path.includes('.') || hasImageExtension(path));
-        const targetPath = isImage && !hasImageExtension(path) ? `${path}.png` : path;
+        console.log('IPFS Request:', {
+            path: url.pathname,
+            segments: pathSegments
+        });
+        
+        const cid = pathSegments[0];
+        const remainingPath = pathSegments.slice(1).join('/');
+        const isImage = hasImageExtension(remainingPath);
 
-        // Try each gateway
+        let lastError: Error | null = null;
+        
         for (const gateway of GATEWAYS) {
             try {
-                const response = await fetch(`${gateway}/ipfs/${targetPath}`);
-                if (!response.ok) continue;
+                const gatewayUrl = `${gateway}/ipfs/${cid}/${remainingPath}`;
+                console.log('Trying gateway URL:', gatewayUrl);
 
-                // For images, stream the response directly
+                const response = await fetchWithTimeout(gatewayUrl);
+                
+                if (!response.ok) {
+                    console.warn(`Gateway ${gateway} returned ${response.status}`);
+                    continue;
+                }
+
+                // Handle images differently from JSON metadata
                 if (isImage) {
-                    const contentType = response.headers.get('content-type') || 'image/png';
-                    return new Response(response.body, {
+                    const imageData = await response.arrayBuffer();
+                    return new Response(imageData, {
                         headers: {
-                            'Content-Type': contentType,
+                            'Content-Type': response.headers.get('content-type') || 'image/jpeg',
+                            'Access-Control-Allow-Origin': '*',
+                            'Cache-Control': 'public, max-age=31536000',
+                        },
+                    });
+                } else {
+                    // For JSON metadata
+                    const data = await response.json();
+                    return new Response(JSON.stringify(data), {
+                        headers: {
+                            'Content-Type': 'application/json',
                             'Access-Control-Allow-Origin': '*',
                             'Cache-Control': 'public, max-age=31536000',
                         },
                     });
                 }
-
-                // For JSON metadata
-                const data = await response.json();
-                return new Response(JSON.stringify(data), {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                        'Cache-Control': 'public, max-age=31536000',
-                    },
-                });
             } catch (error) {
+                lastError = error instanceof Error ? error : new Error('Unknown error');
                 console.error(`Failed to fetch from ${gateway}:`, error);
                 continue;
             }
         }
 
-        throw new Error('Failed to fetch from all gateways');
+        throw new Error(`Failed to fetch from all gateways: ${lastError?.message}`);
     } catch (error) {
         console.error('IPFS API Error:', error);
         return new Response(
-            JSON.stringify({ error: 'Failed to fetch IPFS content' }), 
-            { 
-                status: 500, 
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                } 
-            }
+            JSON.stringify({ error: 'Failed to fetch IPFS content', details: error instanceof Error ? error.message : 'Unknown error' }), 
+            { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
         );
     }
 }

@@ -71,35 +71,41 @@ export async function getIPFSContent(uri: string, retries = 3): Promise<any> {
         return ipfsCache.get(cacheKey);
     }
 
-    const cid = cacheKey.split('/');
     let lastError: Error | null = null;
-
+    
+    // Implement retry logic on the client side
     for (let attempt = 0; attempt < retries; attempt++) {
-        for (const gateway of IPFS_GATEWAYS) {
-            try {
-                const url = `${gateway}${cid[0]}/${cid[1] || ''}`;
-                const response = await fetchWithTimeout(url);
-                
-                if (!response.ok) {
-                    console.warn(`Gateway ${gateway} returned ${response.status} for ${url}`);
-                    continue;
-                }
-
-                const data = await response.json();
-                // Cache successful response
-                ipfsCache.set(cacheKey, data);
-                return data;
-            } catch (error) {
-                lastError = error instanceof Error ? error : new Error('Unknown error');
-                console.warn(`Failed to fetch from ${gateway}:`, error);
-                continue;
+        try {
+            const hash = cacheKey.split('/')[0];
+            const path = cacheKey.split('/').slice(1).join('/');
+            
+            const response = await fetch(`/api/ipfs/${hash}/${path}`, {
+                signal: AbortSignal.timeout(10000) // 10 second timeout
+            });
+            
+            if (!response.ok) {
+                throw new Error(`IPFS fetch failed: ${response.status}`);
             }
-        }
-        // Exponential backoff between retries
-        if (attempt < retries - 1) {
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+            
+            const data = await response.json();
+            ipfsCache.set(cacheKey, data);
+            return data;
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error('Unknown error');
+            console.warn(`Failed to fetch IPFS content (attempt ${attempt + 1}/${retries}):`, error);
+            
+            // Exponential backoff between retries
+            if (attempt < retries - 1) {
+                await new Promise(resolve => 
+                    setTimeout(resolve, Math.pow(2, attempt) * 1000)
+                );
+            }
         }
     }
     
-    throw new Error(`Failed to fetch IPFS content after ${retries} retries: ${lastError?.message || 'Unknown error'}`);
+    throw new Error(
+        `Failed to fetch IPFS content after ${retries} retries: ${
+            lastError?.message || 'Unknown error'
+        }`
+    );
 } 
