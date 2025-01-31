@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import NetworkSelector from './network-selector'
 import { ArrowRight } from 'lucide-react'
 import DeploymentsTicker from './deployments-ticker'
 
