@@ -150,27 +150,29 @@ export default function Inspiration({
     }
   }, []); // Run once on component mount
 
-  // Intersection Observer for infinite scroll
+  // Update the intersection observer
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-    const [entry] = entries;
-    if (entry.isIntersecting && hasMore && !isLoadingMore) {
-      onLoadMoreAction();
-    }
-  }, [hasMore, isLoadingMore, onLoadMoreAction]);
-
   useEffect(() => {
-    const observer = new IntersectionObserver(handleObserver, {
-      rootMargin: '100px',
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMore && !isLoadingMore) {
+          onLoadMoreAction();
+        }
+      },
+      {
+        rootMargin: '100px',
+        threshold: 0.1
+      }
+    );
 
     if (observerTarget.current) {
       observer.observe(observerTarget.current);
     }
 
     return () => observer.disconnect();
-  }, [handleObserver]);
+  }, [hasMore, isLoadingMore, onLoadMoreAction]);
 
   return (
     <div className="relative">
@@ -305,13 +307,14 @@ export default function Inspiration({
               ))}
             </div>
 
-            {/* Replace the Load More button with Infinite Scroll Observer */}
+            {/* Place the observer target at the bottom */}
             {hasMore && (
-              <div ref={observerTarget} className="h-10 mt-8">
+              <div 
+                ref={observerTarget} 
+                className="h-10 mt-8 flex items-center justify-center"
+              >
                 {isLoadingMore && (
-                  <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                  </div>
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
                 )}
               </div>
             )}

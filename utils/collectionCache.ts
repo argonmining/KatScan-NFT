@@ -1,27 +1,41 @@
+import { openDB, IDBPDatabase } from 'idb';
 import { NFTMetadata } from '@/types/nft';
 import { calculateTraitRarities, enrichMetadataWithRarity } from '@/utils/traitRarity';
 
-interface CachedCollection {
+// Export the interface so it can be imported elsewhere
+export interface CachedCollection {
     timestamp: number;
     metadata: Record<string, NFTMetadata>;  // tokenId -> metadata
     traits: Record<string, Set<string>>;    // trait_type -> possible values
+    lastFetchedToken: number;
 }
 
 const CACHE_DURATION = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
 
 export class CollectionCache {
-    private static CACHE_PREFIX = 'collection_metadata_';
+    private static DB_NAME = 'nft_cache';
+    private static STORE_NAME = 'collections';
+    private static db: Promise<IDBPDatabase>;
+
+    private static async getDB() {
+        if (!this.db) {
+            this.db = openDB(this.DB_NAME, 1, {
+                upgrade(db) {
+                    if (!db.objectStoreNames.contains(CollectionCache.STORE_NAME)) {
+                        db.createObjectStore(CollectionCache.STORE_NAME);
+                    }
+                },
+            });
+        }
+        return this.db;
+    }
 
     static async getCollection(tick: string): Promise<CachedCollection | null> {
         try {
-            const cached = localStorage.getItem(this.CACHE_PREFIX + tick);
-            if (!cached) return null;
-
-            const data = JSON.parse(cached);
+            const db = await this.getDB();
+            const data = await db.get(this.STORE_NAME, tick);
             
-            // Check if cache is still valid
-            if (Date.now() - data.timestamp > CACHE_DURATION) {
-                localStorage.removeItem(this.CACHE_PREFIX + tick);
+            if (!data || Date.now() - data.timestamp > CACHE_DURATION) {
                 return null;
             }
 
@@ -34,14 +48,14 @@ export class CollectionCache {
                 [tokenId]: enrichMetadataWithRarity(meta as NFTMetadata, rarities, data.metadata)
             }), {} as Record<string, NFTMetadata>);
 
-            // Convert trait values back to Sets
+            // Convert stored arrays back to Sets
             const traits: Record<string, Set<string>> = {};
             Object.entries(data.traits).forEach(([trait, values]) => {
                 traits[trait] = new Set(values as string[]);
             });
 
             return {
-                timestamp: data.timestamp,
+                ...data,
                 metadata: enrichedMetadata,
                 traits
             };
@@ -51,51 +65,35 @@ export class CollectionCache {
         }
     }
 
-    static async setCollection(
-        tick: string, 
-        metadata: Record<string, NFTMetadata>
-    ): Promise<void> {
+    static async setCollection(tick: string, collection: CachedCollection): Promise<void> {
         try {
-            // Build traits index
-            const traits: Record<string, Set<string>> = {};
-            Object.values(metadata).forEach(nft => {
-                nft.attributes?.forEach((attr: { trait_type: string; value: string }) => {
-                    if (!traits[attr.trait_type]) {
-                        traits[attr.trait_type] = new Set();
-                    }
-                    traits[attr.trait_type].add(attr.value);
-                });
-            });
-
+            const db = await this.getDB();
+            
             // Convert Sets to arrays for storage
             const storedTraits: Record<string, string[]> = {};
-            Object.entries(traits).forEach(([trait, values]) => {
+            Object.entries(collection.traits).forEach(([trait, values]) => {
                 storedTraits[trait] = Array.from(values);
             });
 
-            const cacheData = {
-                timestamp: Date.now(),
-                metadata,
+            await db.put(this.STORE_NAME, {
+                ...collection,
                 traits: storedTraits
-            };
-
-            localStorage.setItem(
-                this.CACHE_PREFIX + tick,
-                JSON.stringify(cacheData)
-            );
+            }, tick);
         } catch (error) {
             console.error('Error writing to cache:', error);
         }
     }
 
-    static clearCache(tick?: string): void {
-        if (tick) {
-            localStorage.removeItem(this.CACHE_PREFIX + tick);
-        } else {
-            // Clear all collection caches
-            Object.keys(localStorage)
-                .filter(key => key.startsWith(this.CACHE_PREFIX))
-                .forEach(key => localStorage.removeItem(key));
+    static async clearCache(tick?: string): Promise<void> {  // Make async and return Promise
+        try {
+            const db = await this.getDB();
+            if (tick) {
+                await db.delete(this.STORE_NAME, tick);
+            } else {
+                await db.clear(this.STORE_NAME);
+            }
+        } catch (error) {
+            console.error('Error clearing cache:', error);
         }
     }
 } 
