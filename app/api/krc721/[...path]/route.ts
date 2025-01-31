@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
-const BASE_URL = 'https://testnet-10.krc721.stream/api/v1/krc721/testnet-10'
+const BASE_URL = 'https://mainnet.krc721.stream/api/v1/krc721/mainnet'
 
 export async function GET(request: NextRequest) {
     try {

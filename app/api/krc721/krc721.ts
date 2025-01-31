@@ -91,8 +91,8 @@ interface TransferOperation extends BaseOperation {
 
 type Operation = DeployOperation | MintOperation | TransferOperation;
 
-// Get network from environment or default to testnet-10
-const DEFAULT_NETWORK: Network = (process.env.NEXT_PUBLIC_KRC721_NETWORK as Network) || 'testnet-10';
+// Get network from environment or default to mainnet
+const DEFAULT_NETWORK: Network = (process.env.NEXT_PUBLIC_KRC721_NETWORK as Network) || 'mainnet';
 
 // Add interface at the top with other interfaces
 interface TokenStatus {
