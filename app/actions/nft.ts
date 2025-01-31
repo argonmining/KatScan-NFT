@@ -53,8 +53,8 @@ export async function fetchCollectionNFTs(
         console.log('Collection base URI:', buri);
 
         const totalSupply = parseInt(max);
-        const limit = params?.limit || DISPLAY_LIMIT;
         const offset = params?.offset ? parseInt(params.offset) : 0;
+        const limit = params?.limit || DISPLAY_LIMIT;
 
         // Try to get from IndexedDB first
         let cachedCollection = await CollectionCache.getCollection(tick);
@@ -111,6 +111,18 @@ export async function fetchCollectionNFTs(
         // Log the cached collection size
         console.log('Cached collection metadata count:', 
             Object.keys(cachedCollection.metadata).length);
+
+        // If we're requesting tokens beyond what we've cached, fetch them first
+        if (cachedCollection && offset + limit > cachedCollection.lastFetchedToken) {
+            const nextBatchStart = Math.max(cachedCollection.lastFetchedToken + 1, INITIAL_BATCH_SIZE + 1);
+            const nextBatchEnd = Math.min(offset + limit + BACKGROUND_BATCH_SIZE, totalSupply);
+            
+            if (nextBatchStart <= nextBatchEnd) {
+                await backgroundFetchMetadata(tick, buri, nextBatchStart, nextBatchEnd);
+                // Refresh cached collection after background fetch
+                cachedCollection = await CollectionCache.getCollection(tick);
+            }
+        }
 
         // Apply filters if any
         let filteredTokenIds = Object.keys(cachedCollection.metadata);
@@ -190,73 +202,64 @@ export async function fetchCollectionNFTs(
     }
 }
 
-// Fix the background fetch metadata function to properly update cache
+// Update background fetch to return a promise
 async function backgroundFetchMetadata(
     tick: string,
     buri: string,
     startToken: number,
-    totalSupply: number
-) {
+    endToken: number
+): Promise<void> {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     try {
-        for (let i = startToken; i <= totalSupply; i += BACKGROUND_BATCH_SIZE) {
-            const batchEnd = Math.min(i + BACKGROUND_BATCH_SIZE - 1, totalSupply);
-            
-            // Get current cache
-            const currentCache = await CollectionCache.getCollection(tick);
-            if (!currentCache) continue;
+        const currentCache = await CollectionCache.getCollection(tick);
+        if (!currentCache) return;
 
-            // Fetch batch
-            const batchPromises = Array.from(
-                { length: batchEnd - i + 1 },
-                async (_, index) => {
-                    const tokenId = (i + index).toString();
-                    
-                    // Skip if already cached
-                    if (currentCache.metadata[tokenId]) return null;
+        // Fetch batch
+        const batchPromises = Array.from(
+            { length: endToken - startToken + 1 },
+            async (_, index) => {
+                const tokenId = (startToken + index).toString();
+                
+                // Skip if already cached
+                if (currentCache.metadata[tokenId]) return null;
 
-                    await delay(50 * index); // Prevent rate limiting
-                    try {
-                        const metadata = await fetchMetadataWithFallback(buri, tokenId);
-                        if (metadata) {
-                            // Process IPFS image URLs
-                            if (metadata.image?.startsWith('ipfs://')) {
-                                const imageHash = metadata.image.replace('ipfs://', '');
-                                metadata.imageUrl = `/api/ipfs/${imageHash}`;
-                            }
+                await delay(50 * index); // Prevent rate limiting
+                try {
+                    const metadata = await fetchMetadataWithFallback(buri, tokenId);
+                    if (metadata) {
+                        if (metadata.image?.startsWith('ipfs://')) {
+                            const imageHash = metadata.image.replace('ipfs://', '');
+                            metadata.imageUrl = `/api/ipfs/${imageHash}`;
                         }
                         return { tokenId, metadata };
-                    } catch (error) {
-                        console.error(`Background: Failed to fetch metadata for token ${tokenId}:`, error);
-                        return null;
                     }
+                } catch (error) {
+                    console.error(`Background: Failed to fetch metadata for token ${tokenId}:`, error);
+                    return null;
                 }
-            );
+            }
+        );
 
-            const results = await Promise.all(batchPromises);
-            
-            // Update cache with new batch
-            const updatedMetadata = { ...currentCache.metadata };
-            results.forEach(result => {
-                if (result?.metadata) {
-                    updatedMetadata[result.tokenId] = result.metadata;
-                }
-            });
+        const results = await Promise.all(batchPromises);
+        
+        // Update cache with new batch
+        const updatedMetadata = { ...currentCache.metadata };
+        results.forEach(result => {
+            if (result?.metadata) {
+                updatedMetadata[result.tokenId] = result.metadata;
+            }
+        });
 
-            // Update cache with proper type
-            const updatedCache: CachedCollection = {
-                ...currentCache,
-                metadata: updatedMetadata,
-                lastFetchedToken: batchEnd,
-                timestamp: Date.now()
-            };
+        // Update cache with proper type
+        const updatedCache: CachedCollection = {
+            ...currentCache,
+            metadata: updatedMetadata,
+            lastFetchedToken: endToken,
+            timestamp: Date.now()
+        };
 
-            await CollectionCache.setCollection(tick, updatedCache);
-
-            // Add delay between batches
-            await delay(1000);
-        }
+        await CollectionCache.setCollection(tick, updatedCache);
     } catch (error) {
         console.error('Background fetch error:', error);
     }
