@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { IPFS_GATEWAYS } from '@/utils/ipfs'
 
 export const runtime = 'edge'
 

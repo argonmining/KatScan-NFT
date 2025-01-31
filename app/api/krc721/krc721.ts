@@ -100,6 +100,23 @@ interface TokenStatus {
     isMinted: boolean;
 }
 
+// Add these types
+interface AddressCollection {
+    tick: string;
+    tokens: Array<{
+        tokenId: string;
+        owner: string;
+    }>;
+}
+
+// Add this interface near the top with other interfaces
+interface AddressNFT {
+    tick: string;
+    tokenId: string;
+    buri?: string;
+    owner: string;
+}
+
 export class KRC721Api {
     private network: Network;
     private baseUrl: string;
@@ -173,9 +190,9 @@ export class KRC721Api {
         }
     }
 
-    async getAddressNFTs(address: string) {
+    async getAddressNFTs(address: string): Promise<AddressNFT[]> {
         try {
-            let allNFTs: Array<{tick: string; tokenId: string; buri?: string}> = [];
+            let allNFTs: AddressNFT[] = [];
             let nextOffset: string | undefined;
             
             do {
@@ -188,7 +205,12 @@ export class KRC721Api {
                 });
                 
                 if (response.result) {
-                    allNFTs = [...allNFTs, ...response.result];
+                    // Each NFT in the response will have the owner set to the address
+                    const nftsWithOwner = response.result.map((nft: any) => ({
+                        ...nft,
+                        owner: address // Set the owner to the address we queried
+                    }));
+                    allNFTs = [...allNFTs, ...nftsWithOwner];
                     nextOffset = response.next;
                 }
             } while (nextOffset);
@@ -391,6 +413,28 @@ export class KRC721Api {
             acc[id] = status || { owner: undefined, isMinted: false };
             return acc;
         }, {} as Record<string, TokenStatus>);
+    }
+
+    // Add this new method
+    async getAddressCollections(address: string): Promise<AddressCollection[]> {
+        const nfts = await this.getAddressNFTs(address);
+        
+        // Group NFTs by collection
+        const collectionMap = nfts.reduce((acc, nft) => {
+            if (!acc[nft.tick]) {
+                acc[nft.tick] = {
+                    tick: nft.tick,
+                    tokens: []
+                };
+            }
+            acc[nft.tick].tokens.push({
+                tokenId: nft.tokenId,
+                owner: nft.owner // Now TypeScript knows this exists
+            });
+            return acc;
+        }, {} as Record<string, AddressCollection>);
+
+        return Object.values(collectionMap);
     }
 
     // Add other API methods as needed...
