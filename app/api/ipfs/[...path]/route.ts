@@ -3,13 +3,14 @@ import { NextRequest } from 'next/server'
 export const runtime = 'edge'
 
 const GATEWAYS = [
-    'https://w3s.link',
-    'https://ipfs.io',
-    'https://cf-ipfs.com',
-    'https://gateway.ipfs.io'
+    'https://w3s.link',        // Web3.Storage - fastest
+    'https://dweb.link',       // Protocol Labs - very fast
+    'https://ipfs.io',         // Protocol Labs - reliable
+    'https://nftstorage.link', // NFT.Storage
+    'https://gateway.pinata.cloud'  // Pinata fallback
 ];
 
-const FETCH_TIMEOUT = 5000; // 5 second timeout per gateway attempt
+const FETCH_TIMEOUT = 5000; // 5 seconds
 
 function hasImageExtension(path: string): boolean {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
