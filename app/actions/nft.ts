@@ -491,10 +491,9 @@ export async function fetchAddressNFTs(
         const offset = params?.offset ? parseInt(params.offset) : 0;
         const limit = params?.limit || DISPLAY_LIMIT;
 
-        // Get all NFTs for the address with error handling
+        // Get all NFTs for the address
         const addressNFTs = await krc721Api.getAddressNFTs(address);
         
-        // Early return if no NFTs found
         if (!addressNFTs?.length) {
             return { 
                 nfts: [], 
@@ -503,50 +502,100 @@ export async function fetchAddressNFTs(
             };
         }
 
-        console.log(`Found ${addressNFTs.length} NFTs for address ${address}`);
-
-        // Only process the current page of NFTs
+        // Get the current page of NFTs
         const startIdx = offset;
         const endIdx = Math.min(startIdx + limit, addressNFTs.length);
         const currentBatch = addressNFTs.slice(startIdx, endIdx);
 
-        console.log(`Processing NFTs ${startIdx + 1} to ${endIdx} of ${addressNFTs.length}`);
+        // Get unique collections from the current batch
+        const uniqueCollections = Array.from(new Set(currentBatch.map(nft => nft.tick)));
 
-        // Create a map to store collection metadata to avoid duplicate fetches
-        const collectionMetadataMap = new Map<string, any>();
+        // Fetch collection details in parallel
+        const collectionDetails = await Promise.all(
+            uniqueCollections.map(async (tick) => {
+                // First check if we have this collection in cache
+                const cachedCollection = await CollectionCache.getCollection(tick);
+                if (cachedCollection) {
+                    return { tick, details: cachedCollection };
+                }
 
-        // Process NFTs in sequence with proper error handling and retries
-        const processedNFTs: NFTDisplay[] = [];
-        
-        for (const holding of currentBatch) {
-            try {
-                // Get collection details (reuse if already fetched)
-                let collectionDetails = collectionMetadataMap.get(holding.tick);
-                if (!collectionDetails) {
-                    collectionDetails = await krc721Api.getCollectionDetails(holding.tick);
-                    if (collectionDetails?.result?.buri) {
-                        collectionMetadataMap.set(holding.tick, collectionDetails);
+                // If not in cache, fetch collection details
+                const details = await krc721Api.getCollectionDetails(tick);
+                return { tick, details: details?.result };
+            })
+        );
+
+        // Create a map for easy lookup
+        const collectionsMap = new Map(
+            collectionDetails.map(({ tick, details }) => [tick, details])
+        );
+
+        // Process NFTs in parallel
+        const processedNFTs = await Promise.all(
+            currentBatch.map(async (holding) => {
+                try {
+                    const collection = collectionsMap.get(holding.tick);
+                    
+                    // Check if we have metadata in collection cache
+                    const cachedCollection = await CollectionCache.getCollection(holding.tick);
+                    if (cachedCollection?.metadata[holding.tokenId]) {
+                        return {
+                            tick: holding.tick,
+                            id: holding.tokenId,
+                            owner: holding.owner,
+                            metadata: cachedCollection.metadata[holding.tokenId],
+                            isMinted: true
+                        };
                     }
-                }
 
-                if (!collectionDetails?.result?.buri) {
-                    console.error(`No metadata URI found for collection ${holding.tick}`);
-                    continue;
-                }
+                    if (!collection?.buri) {
+                        throw new Error(`No metadata URI found for collection ${holding.tick}`);
+                    }
 
-                // Add delay between requests
-                await delay(500);
+                    // Fetch metadata from IPFS
+                    const metadata = await fetchMetadataWithRetry(
+                        collection.buri,
+                        holding.tokenId,
+                        2
+                    ).catch(async () => {
+                        // Only try with .json extension as fallback
+                        return fetchMetadataWithRetry(
+                            collection.buri,
+                            `${holding.tokenId}.json`,
+                            1
+                        );
+                    });
 
-                const metadata = await fetchMetadataWithRetry(
-                    collectionDetails.result.buri,
-                    holding.tokenId,
-                    2 // Reduce retry attempts
-                );
+                    // Ensure IPFS image handling is consistent
+                    if (metadata?.image) {
+                        if (metadata.image.startsWith('ipfs://')) {
+                            metadata.imageUrl = `/api/ipfs/${metadata.image.replace('ipfs://', '')}`;
+                        } else if (metadata.image.startsWith('http')) {
+                            metadata.imageUrl = metadata.image;
+                        } else {
+                            // Handle case where image might be just the CID or path
+                            metadata.imageUrl = `/api/ipfs/${metadata.image}`;
+                        }
+                    }
 
-                if (!metadata) {
-                    console.error(`No metadata found for token ${holding.tick}-${holding.tokenId}`);
-                    // Add placeholder metadata instead of skipping
-                    processedNFTs.push({
+                    return {
+                        tick: holding.tick,
+                        id: holding.tokenId,
+                        owner: holding.owner,
+                        metadata: {
+                            name: metadata.name || `${holding.tick} #${holding.tokenId}`,
+                            description: metadata.description || '',
+                            image: metadata.image || '',
+                            imageUrl: metadata.imageUrl || '',
+                            edition: metadata.edition || parseInt(holding.tokenId),
+                            attributes: metadata.attributes || []
+                        },
+                        isMinted: true
+                    };
+                } catch (error) {
+                    console.error(`Failed to process NFT ${holding.tick}-${holding.tokenId}:`, error);
+                    // Return placeholder for failed NFTs
+                    return {
                         tick: holding.tick,
                         id: holding.tokenId,
                         owner: holding.owner,
@@ -559,32 +608,10 @@ export async function fetchAddressNFTs(
                             attributes: []
                         },
                         isMinted: true
-                    });
-                    continue;
+                    };
                 }
-
-                processedNFTs.push({
-                    tick: holding.tick,
-                    id: holding.tokenId,
-                    owner: holding.owner,
-                    metadata: {
-                        name: metadata.name || `${holding.tick} #${holding.tokenId}`,
-                        description: metadata.description || '',
-                        image: metadata.image || '',
-                        imageUrl: metadata.image?.startsWith('ipfs://')
-                            ? `/api/ipfs/${metadata.image.replace('ipfs://', '')}`
-                            : metadata.image,
-                        edition: metadata.edition || parseInt(holding.tokenId),
-                        attributes: metadata.attributes || []
-                    },
-                    isMinted: true
-                });
-
-            } catch (error) {
-                console.error(`Failed to process NFT ${holding.tick}-${holding.tokenId}:`, error);
-                continue;
-            }
-        }
+            })
+        );
 
         return {
             nfts: processedNFTs,
