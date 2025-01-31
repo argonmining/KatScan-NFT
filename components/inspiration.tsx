@@ -17,7 +17,7 @@ interface InspirationProps {
   searchType: 'collection' | 'address';
   searchValue: string;
   hasMore: boolean;
-  onLoadMoreAction: () => Promise<void>;
+  onLoadMoreAction: () => void;
   collection?: CollectionInfoType;
   hasSearched: boolean;
 }
@@ -174,6 +174,8 @@ export default function Inspiration({
     return () => observer.disconnect();
   }, [hasMore, isLoadingMore, onLoadMoreAction]);
 
+  console.log('Collection data:', collection);
+
   return (
     <div className="relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -304,14 +306,16 @@ export default function Inspiration({
               ))}
             </div>
 
-            {/* Place the observer target at the bottom */}
+            {/* Loading indicator at bottom */}
             {hasMore && (
               <div 
                 ref={observerTarget} 
-                className="h-10 mt-8 flex items-center justify-center"
+                className="mt-8 mb-4" // Add margin to separate from grid
               >
                 {isLoadingMore && (
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+                  <div className="flex justify-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+                  </div>
                 )}
               </div>
             )}

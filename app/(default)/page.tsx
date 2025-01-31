@@ -43,7 +43,7 @@ export default function Home() {
     address: false
   });
 
-  const ITEMS_PER_PAGE = 100; // Show more NFTs per page
+  const ITEMS_PER_PAGE = 50; // Smaller batch size for smoother loading
 
   const handleSearchTypeChange = (type: 'collection' | 'address') => {
     setSearchType(type);
@@ -54,43 +54,44 @@ export default function Home() {
   const handleSearch = async (type: 'collection' | 'address', value: string) => {
     setIsLoading(true);
     setError(null);
-    // Update hasSearched for this specific type
     setHasSearched(prev => ({
-      ...prev,
-      [type]: true
+        ...prev,
+        [type]: true
     }));
-    // Store the searched value
     setLastSearched(prev => ({
-      ...prev,
-      [type]: value
+        ...prev,
+        [type]: value
     }));
 
-    // Only clear data if searching the same type
-    if (type === searchType) {
-        if (type === 'collection') {
-            setCollectionData({
-                nfts: [],
-                nextOffset: undefined,
-                hasMore: false,
-                collectionInfo: undefined
-            });
-        } else {
-            setAddressData({
-                nfts: [],
-                nextOffset: undefined,
-                hasMore: false
-            });
-        }
+    // Clear data completely when starting a new search
+    if (type === 'collection') {
+        setCollectionData({
+            nfts: [],
+            nextOffset: undefined,
+            hasMore: false,
+            collectionInfo: undefined
+        });
+    } else {
+        setAddressData({
+            nfts: [],
+            nextOffset: undefined,
+            hasMore: false
+        });
     }
 
     try {
         if (type === 'collection') {
-            const response = await fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE });
+            // Get both collection details and initial NFTs
+            const [response, collectionDetails] = await Promise.all([
+                fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE }), // Make sure to pass limit
+                krc721Api.getCollectionDetails(value)
+            ]);
+            
             setCollectionData({
                 nfts: response.nfts,
                 nextOffset: response.nextOffset,
                 hasMore: response.hasMore,
-                collectionInfo: response.collection
+                collectionInfo: collectionDetails.result
             });
         } else {
             const response = await fetchAddressNFTs(value, { limit: ITEMS_PER_PAGE });
@@ -109,18 +110,16 @@ export default function Home() {
   };
 
   const handleLoadMore = async () => {
-    if (loadingMore) return;
-    
-    const currentData = searchType === 'collection' ? collectionData : addressData;
-    if (!currentData.nextOffset) return;
-    
+    if (loadingMore || !currentData.nextOffset) return;
     setLoadingMore(true);
+
     try {
         if (searchType === 'collection') {
             const response = await fetchCollectionNFTs(searchValue, {
                 limit: ITEMS_PER_PAGE,
                 offset: currentData.nextOffset
             });
+            
             setCollectionData(prev => ({
                 ...prev,
                 nfts: [...prev.nfts, ...response.nfts],
@@ -140,12 +139,12 @@ export default function Home() {
             }));
         }
     } catch (error) {
-        console.error('Load more error:', error)
-        setError(error instanceof Error ? error.message : 'Failed to load more NFTs')
+        console.error('Load more error:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load more NFTs');
     } finally {
-        setLoadingMore(false)
+        setLoadingMore(false);
     }
-  }
+  };
 
   // Get current data based on search type
   const currentData = searchType === 'collection' ? collectionData : addressData;
@@ -165,16 +164,16 @@ export default function Home() {
         onSearchValueChangeAction={setSearchValue}
         onSearchTypeChangeAction={handleSearchTypeChange}
       />
-      <Inspiration 
-        nfts={currentData.nfts}
+      <Inspiration
+        nfts={searchType === 'collection' ? collectionData.nfts : addressData.nfts}
         isLoading={isLoading}
         isLoadingMore={loadingMore}
         error={error}
         searchType={searchType}
-        searchValue={currentSearchValue}
-        hasMore={currentData.hasMore}
+        searchValue={searchValue}
+        hasMore={searchType === 'collection' ? collectionData.hasMore : addressData.hasMore}
         onLoadMoreAction={handleLoadMore}
-        collection={searchType === 'collection' ? collectionData.collectionInfo : undefined}
+        collection={collectionData.collectionInfo}
         hasSearched={hasSearched[searchType]}
       />
       {/* <Carousel /> */}

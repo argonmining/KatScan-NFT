@@ -36,19 +36,32 @@ const IPFS_GATEWAYS = [
     PINATA_GATEWAY + '/ipfs/'
 ];
 
-async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+const RATE_LIMIT_DELAY = 100; // ms between requests
+let lastRequestTime = 0;
 
+async function rateLimit() {
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTime;
+    if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
+    }
+    lastRequestTime = Date.now();
+}
+
+async function fetchWithRetry(url: string, retries = 3, backoff = 1000): Promise<Response> {
     try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
+        await rateLimit();
+        const response = await fetch(url);
+        if (response.status === 429 && retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, backoff));
+            return fetchWithRetry(url, retries - 1, backoff * 2);
+        }
         return response;
     } catch (error) {
-        clearTimeout(timeoutId);
+        if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, backoff));
+            return fetchWithRetry(url, retries - 1, backoff * 2);
+        }
         throw error;
     }
 }

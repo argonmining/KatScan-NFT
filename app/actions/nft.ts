@@ -18,8 +18,11 @@ const tokenStatusCache = new Map<string, TokenStatus>();
 
 // Update the batch sizes at the top of the file
 const INITIAL_BATCH_SIZE = 12; // Show first 12 immediately
-const BACKGROUND_BATCH_SIZE = 50; // Fetch rest in chunks of 50
-const DISPLAY_LIMIT = 200; // Show more NFTs per page
+const BACKGROUND_BATCH_SIZE = 100; // Larger batch for background
+const CHUNK_SIZE = 20; // Process in chunks of 20
+const MAX_CONCURRENT_CHUNKS = 5; // Process 5 chunks simultaneously
+const DISPLAY_LIMIT = 50; // Keep this smaller for smoother loading
+const MAX_CACHE_SIZE = 2000; // Increase cache size for larger collections
 
 // Add proper type for initialCache
 interface InitialCache extends CachedCollection {
@@ -29,16 +32,92 @@ interface InitialCache extends CachedCollection {
     lastFetchedToken: number;
 }
 
+// Queue processor for background fetching
+class MetadataQueue {
+    private queue: string[] = [];
+    private processing = false;
+    
+    async add(tick: string, buri: string, ids: string[]) {
+        this.queue.push(...ids);
+        if (!this.processing) {
+            this.processing = true;
+            await this.process(tick, buri);
+        }
+    }
+
+    private async process(tick: string, buri: string) {
+        while (this.queue.length > 0) {
+            const chunks = this.createChunks(this.queue.splice(0, BACKGROUND_BATCH_SIZE));
+            await Promise.all(
+                chunks.map(chunk => this.processChunk(tick, buri, chunk))
+            );
+        }
+        this.processing = false;
+    }
+
+    private createChunks(ids: string[]): string[][] {
+        const chunks: string[][] = [];
+        for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+            chunks.push(ids.slice(i, i + CHUNK_SIZE));
+        }
+        return chunks;
+    }
+
+    private async processChunk(tick: string, buri: string, chunk: string[]) {
+        try {
+            const [metadata, owners] = await Promise.all([
+                Promise.all(
+                    chunk.map(id => 
+                        fetchMetadataWithFallback(buri, id)
+                        .catch(error => {
+                            console.error(`Failed to fetch metadata for token ${id}:`, error);
+                            return null;
+                        })
+                    )
+                ),
+                krc721Api.getTokensBatch(tick, chunk)
+            ]);
+
+            const currentCache = await CollectionCache.getCollection(tick);
+            if (!currentCache) return;
+
+            const updatedMetadata = { ...currentCache.metadata };
+            chunk.forEach((id, index) => {
+                if (metadata[index]) {
+                    const meta = metadata[index];
+                    if (meta.image?.startsWith('ipfs://')) {
+                        meta.imageUrl = `/api/ipfs/${meta.image.replace('ipfs://', '')}`;
+                    }
+                    updatedMetadata[id] = meta;
+                }
+
+                const status = owners[id];
+                if (status) {
+                    tokenStatusCache.set(`${tick}-${id}`, status);
+                }
+            });
+
+            await CollectionCache.setCollection(tick, {
+                ...currentCache,
+                metadata: updatedMetadata,
+                lastFetchedToken: Math.max(currentCache.lastFetchedToken, ...chunk.map(Number)),
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            console.error('Chunk processing error:', error);
+        }
+    }
+}
+
+const metadataQueue = new MetadataQueue();
+
 export async function fetchCollectionNFTs(
     tick: string, 
     params?: { limit?: number; offset?: string; filters?: Record<string, Set<string>> }
 ): Promise<PaginatedNFTs> {
     try {
-        // Fetch collection details and owners in parallel
-        const [collectionResponse, ownersResponse] = await Promise.all([
-            krc721Api.getCollectionDetails(tick),
-            krc721Api.getAllTokenOwners(tick)
-        ]);
+        // First, only fetch collection details - this is fast
+        const collectionResponse = await krc721Api.getCollectionDetails(tick);
         
         if (!collectionResponse.result) {
             throw new Error(`Collection "${tick}" not found. Please check the ticker and try again.`);
@@ -49,228 +128,143 @@ export async function fetchCollectionNFTs(
             throw new Error('Collection has no metadata URI');
         }
 
-        // Log the buri to verify we're getting it
-        console.log('Collection base URI:', buri);
-
         const totalSupply = parseInt(max);
         const offset = params?.offset ? parseInt(params.offset) : 0;
         const limit = params?.limit || DISPLAY_LIMIT;
 
-        // Try to get from IndexedDB first
+        // Try to get from cache first
         let cachedCollection = await CollectionCache.getCollection(tick);
         
         if (!cachedCollection) {
-            // Initialize cache structure with proper typing
+            // Initialize cache with empty data
             const initialCache: InitialCache = {
                 metadata: {},
                 timestamp: Date.now(),
                 traits: {},
                 lastFetchedToken: 0
             };
-            
-            // Fetch initial visible batch
-            const initialBatchPromises = Array.from(
-                { length: Math.min(INITIAL_BATCH_SIZE, totalSupply) },
-                async (_, i) => {
-                    const tokenId = (i + 1).toString();
-                    try {
-                        const metadata = await fetchMetadataWithFallback(buri, tokenId);
-                        if (metadata) {
-                            // Process IPFS image URLs
-                            if (metadata.image?.startsWith('ipfs://')) {
-                                const imageHash = metadata.image.replace('ipfs://', '');
-                                metadata.imageUrl = `/api/ipfs/${imageHash}`;
-                            }
-                            initialCache.metadata[tokenId] = metadata;
-                        }
-                        return { tokenId, metadata };
-                    } catch (error) {
-                        console.error(`Initial batch: Failed to fetch metadata for token ${tokenId}:`, error);
-                        return null;
-                    }
-                }
+
+            // Only fetch first INITIAL_BATCH_SIZE tokens for immediate display
+            const initialTokenIds = Array.from(
+                { length: Math.min(INITIAL_BATCH_SIZE, totalSupply) }, 
+                (_, i) => (i + 1).toString()  // Start from 1
             );
 
-            await Promise.all(initialBatchPromises);
-            
+            // Fetch metadata and owners in parallel for initial batch
+            const [initialMetadata, initialOwners] = await Promise.all([
+                Promise.all(
+                    initialTokenIds.map(id => 
+                        fetchMetadataWithFallback(buri, id)
+                        .catch(error => {
+                            console.error(`Failed to fetch metadata for token ${id}:`, error);
+                            return null;
+                        })
+                    )
+                ),
+                krc721Api.getTokensBatch(tick, initialTokenIds)
+            ]);
+
+            // Process initial batch
+            initialTokenIds.forEach((id, index) => {
+                if (initialMetadata[index]) {
+                    const metadata = initialMetadata[index];
+                    if (metadata.image?.startsWith('ipfs://')) {
+                        metadata.imageUrl = `/api/ipfs/${metadata.image.replace('ipfs://', '')}`;
+                    }
+                    initialCache.metadata[id] = metadata;
+                }
+                
+                // Cache owner status
+                const status = initialOwners[id];
+                if (status) {
+                    tokenStatusCache.set(`${tick}-${id}`, status);
+                }
+            });
+
             // Save initial batch to cache
             await CollectionCache.setCollection(tick, initialCache);
             cachedCollection = initialCache;
 
-            // Start background fetching
+            // Start background fetching for remaining tokens
             if (totalSupply > INITIAL_BATCH_SIZE) {
                 backgroundFetchMetadata(tick, buri, INITIAL_BATCH_SIZE + 1, totalSupply);
             }
         }
 
-        if (!cachedCollection || !Object.keys(cachedCollection.metadata).length) {
-            console.error('No metadata found for collection');
-            throw new Error('Failed to load collection metadata');
-        }
+        // Handle pagination and filtering with available data
+        const availableTokenIds = Array.from(
+            { length: totalSupply },
+            (_, i) => (i + 1).toString()
+        ).filter(id => cachedCollection.metadata[id] || parseInt(id) <= cachedCollection.lastFetchedToken);
 
-        // Log the cached collection size
-        console.log('Cached collection metadata count:', 
-            Object.keys(cachedCollection.metadata).length);
-
-        // If we're requesting tokens beyond what we've cached, fetch them first
-        if (cachedCollection && offset + limit > cachedCollection.lastFetchedToken) {
-            const nextBatchStart = Math.max(cachedCollection.lastFetchedToken + 1, INITIAL_BATCH_SIZE + 1);
-            const nextBatchEnd = Math.min(offset + limit + BACKGROUND_BATCH_SIZE, totalSupply);
-            
-            if (nextBatchStart <= nextBatchEnd) {
-                await backgroundFetchMetadata(tick, buri, nextBatchStart, nextBatchEnd);
-                // Refresh cached collection after background fetch
-                const updatedCache = await CollectionCache.getCollection(tick);
-                if (!updatedCache) {
-                    throw new Error('Failed to retrieve updated cache after background fetch');
-                }
-                cachedCollection = updatedCache;
-            }
-        }
-
-        // Add null check before accessing cachedCollection
-        if (!cachedCollection) {
-            throw new Error('Failed to load or update collection cache');
-        }
-
-        // Now TypeScript knows cachedCollection is not null
-        let filteredTokenIds = Object.keys(cachedCollection.metadata);
+        let filteredTokenIds = availableTokenIds;
 
         // Apply filters if any
         if (params?.filters && Object.keys(params.filters).length > 0) {
-            filteredTokenIds = filteredTokenIds.filter(tokenId => {
-                const metadata = cachedCollection!.metadata[tokenId];
-                return Object.entries(params.filters!).every(([trait_type, allowedValues]) => {
-                    const attribute = metadata.attributes.find(
-                        (attr: { trait_type: string; value: string }) => 
-                        attr.trait_type === trait_type
-                    );
-                    return attribute && allowedValues.has(attribute.value);
+            filteredTokenIds = availableTokenIds.filter(id => {
+                const metadata = cachedCollection!.metadata[id];
+                return metadata && Object.entries(params.filters!).every(([trait, values]) => {
+                    const attribute = metadata.attributes?.find(attr => attr.trait_type === trait);
+                    return attribute && values.has(attribute.value);
                 });
             });
         }
 
-        // Sort and paginate filtered tokens
+        // Paginate filtered results
         const paginatedTokenIds = filteredTokenIds
-            .sort((a, b) => parseInt(a) - parseInt(b))
             .slice(offset, offset + limit);
 
-        // Batch fetch token status for visible NFTs
-        const tokenIds = paginatedTokenIds;
-        let tokenStatuses: Record<string, TokenStatus> = {};
+        // Convert to NFTDisplay format using cached data
+        const nfts = paginatedTokenIds.map((id): NFTDisplay => ({
+            tick,
+            id,
+            owner: tokenStatusCache.get(`${tick}-${id}`)?.owner,
+            metadata: cachedCollection!.metadata[id],
+            isMinted: tokenStatusCache.get(`${tick}-${id}`)?.isMinted ?? false
+        })).filter(nft => nft.metadata); // Filter out NFTs with missing metadata
 
-        // Check cache first
-        const uncachedTokenIds = tokenIds.filter(id => !tokenStatusCache.has(`${tick}-${id}`));
-
-        if (uncachedTokenIds.length > 0) {
-            // Fetch uncached token statuses in batch
-            const batchResults = await krc721Api.getTokensBatch(tick, uncachedTokenIds);
-            
-            // Update cache with new results
-            Object.entries(batchResults).forEach(([id, status]) => {
-                const cacheKey = `${tick}-${id}`;
-                tokenStatusCache.set(cacheKey, status);
-            });
+        // Trigger background fetch if needed
+        if (offset + limit > cachedCollection.lastFetchedToken) {
+            const nextBatchStart = Math.max(cachedCollection.lastFetchedToken + 1, INITIAL_BATCH_SIZE + 1);
+            if (nextBatchStart <= totalSupply) {
+                backgroundFetchMetadata(tick, buri, nextBatchStart, totalSupply);
+            }
         }
 
-        // Get all statuses from cache
-        tokenStatuses = tokenIds.reduce((acc, id) => {
-            const cacheKey = `${tick}-${id}`;
-            const status = tokenStatusCache.get(cacheKey);
-            acc[id] = status as TokenStatus;
-            return acc;
-        }, {} as Record<string, TokenStatus>);
-
-        // Construct NFT objects
-        const validNfts = paginatedTokenIds.map((tokenId): NFTDisplay => ({
-            tick,
-            id: tokenId,
-            owner: tokenStatuses[tokenId].owner,
-            metadata: cachedCollection!.metadata[tokenId],
-            isMinted: tokenStatuses[tokenId].isMinted
-        }));
-
-        // Get collection metadata from first NFT
-        const collectionMetadata = validNfts[0] ? {
-            name: validNfts[0].metadata.name.replace(/#?\s*\d+$/, '').trim(),
-            description: validNfts[0].metadata.description
-        } : undefined;
-
         return {
-            nfts: validNfts,
-            hasMore: offset + limit < filteredTokenIds.length,
-            nextOffset: offset + limit < filteredTokenIds.length ? (offset + limit).toString() : undefined,
-            collection: {
-                ...restCollectionData,
-                minted,
-                max,
-                metadata: collectionMetadata
-            }
+            nfts,
+            hasMore: offset + limit < totalSupply,
+            nextOffset: offset + limit < totalSupply ? 
+                (offset + limit).toString() : undefined,
         };
     } catch (error) {
-        console.error('Collection fetch error:', error);
+        console.error('Failed to fetch collection NFTs:', error);
         throw error;
     }
 }
 
-// Update background fetch to return a promise
+// Update background fetch to use queue
 async function backgroundFetchMetadata(
-    tick: string,
-    buri: string,
-    startToken: number,
-    endToken: number
-): Promise<void> {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
+    tick: string, 
+    buri: string, 
+    startIndex: number, 
+    totalSupply: number
+) {
     try {
-        const currentCache = await CollectionCache.getCollection(tick);
-        if (!currentCache) return;
-
-        // Fetch batch
-        const batchPromises = Array.from(
-            { length: endToken - startToken + 1 },
-            async (_, index) => {
-                const tokenId = (startToken + index).toString();
-                
-                // Skip if already cached
-                if (currentCache.metadata[tokenId]) return null;
-
-                await delay(50 * index); // Prevent rate limiting
-                try {
-                    const metadata = await fetchMetadataWithFallback(buri, tokenId);
-                    if (metadata) {
-                        if (metadata.image?.startsWith('ipfs://')) {
-                            const imageHash = metadata.image.replace('ipfs://', '');
-                            metadata.imageUrl = `/api/ipfs/${imageHash}`;
-                        }
-                        return { tokenId, metadata };
-                    }
-                } catch (error) {
-                    console.error(`Background: Failed to fetch metadata for token ${tokenId}:`, error);
-                    return null;
-                }
-            }
+        const batchIds = Array.from(
+            { length: Math.min(BACKGROUND_BATCH_SIZE, totalSupply - startIndex + 1) },
+            (_, index) => (startIndex + index).toString()
         );
 
-        const results = await Promise.all(batchPromises);
-        
-        // Update cache with new batch
-        const updatedMetadata = { ...currentCache.metadata };
-        results.forEach(result => {
-            if (result?.metadata) {
-                updatedMetadata[result.tokenId] = result.metadata;
-            }
-        });
+        await metadataQueue.add(tick, buri, batchIds);
 
-        // Update cache with proper type
-        const updatedCache: CachedCollection = {
-            ...currentCache,
-            metadata: updatedMetadata,
-            lastFetchedToken: endToken,
-            timestamp: Date.now()
-        };
-
-        await CollectionCache.setCollection(tick, updatedCache);
+        // If there are more tokens to fetch, schedule the next batch
+        const nextStartIndex = startIndex + BACKGROUND_BATCH_SIZE;
+        if (nextStartIndex <= totalSupply) {
+            setTimeout(() => {
+                backgroundFetchMetadata(tick, buri, nextStartIndex, totalSupply);
+            }, 100);
+        }
     } catch (error) {
         console.error('Background fetch error:', error);
     }
