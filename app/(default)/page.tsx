@@ -89,15 +89,17 @@ export default function Home() {
         if (type === 'collection') {
             // Get both collection details and initial NFTs
             const [response, collectionDetails] = await Promise.all([
-                fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE }), // Make sure to pass limit
+                fetchCollectionNFTs(value, { limit: ITEMS_PER_PAGE }),
                 krc721Api.getCollectionDetails(value)
             ]);
+            
+            console.log('Collection response:', response);
             
             setCollectionData({
                 nfts: response.nfts,
                 nextOffset: response.nextOffset,
                 hasMore: response.hasMore,
-                collectionInfo: collectionDetails.result
+                collectionInfo: response.collection
             });
         } else {
             const response = await fetchAddressNFTs(value, { limit: ITEMS_PER_PAGE });

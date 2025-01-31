@@ -82,4 +82,23 @@ export async function getIPFSContent(uri: string, retries = 3): Promise<any> {
     }
     
     return response.json();
-} 
+}
+
+// Add to existing IPFS utils
+const gatewayRequests = new Map<string, number>();
+const RATE_LIMIT_WINDOW = 1000; // 1 second
+const MAX_REQUESTS_PER_WINDOW = 50; // 50 requests per second
+
+function canUseGateway(gateway: string): boolean {
+    const now = Date.now();
+    const lastRequest = gatewayRequests.get(gateway) || 0;
+    
+    if (now - lastRequest > RATE_LIMIT_WINDOW) {
+        gatewayRequests.set(gateway, now);
+        return true;
+    }
+    
+    return false;
+}
+
+export { canUseGateway }; 

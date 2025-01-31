@@ -200,7 +200,7 @@ export default function Inspiration({
     }
   }, [isIntersecting, hasMore, isLoadingMore, debouncedLoadMore, nfts.length]);
 
-  console.log('Collection data:', collection);
+  console.log('Inspiration collection prop:', collection);
 
   return (
     <div className="relative">

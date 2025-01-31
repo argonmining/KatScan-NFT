@@ -1,6 +1,6 @@
 import { krc721Api } from '@/app/api/krc721/krc721'
 import { getIPFSContent } from '@/utils/ipfs'
-import { NFTDisplay, PaginatedNFTs, NFTMetadata } from '@/types/nft'
+import { NFTDisplay, PaginatedNFTs, NFTMetadata, CollectionMetadata } from '@/types/nft'
 import { CollectionCache, CachedCollection } from '@/utils/collectionCache'
 
 interface TokenStatus {
@@ -138,8 +138,30 @@ export function stopAllBackgroundFetches() {
     activeFetches.clear();
 }
 
+// Add new function to fetch collection metadata
+async function fetchCollectionMetadata(buri: string): Promise<CollectionMetadata | null> {
+    try {
+        // Clean up the buri by removing any 'ipfs:/' prefix
+        const cleanBuri = buri.replace(/^ipfs:\/+/, '');
+        console.log('Fetching collection metadata from:', cleanBuri);
+        const response = await fetch(`/api/ipfs/${cleanBuri}/collection`);
+        
+        if (!response.ok) {
+            console.log('Collection metadata not found:', response.status, response.statusText);
+            return null;
+        }
+        const data = await response.json();
+        console.log('Collection metadata fetched:', data);
+        return data;
+    } catch (error) {
+        console.error('Error fetching collection metadata:', error);
+        return null;
+    }
+}
+
+// Update existing fetchCollectionNFTs function
 export async function fetchCollectionNFTs(
-    tick: string, 
+    tick: string,
     params?: { limit?: number; offset?: string; filters?: Record<string, Set<string>> }
 ): Promise<PaginatedNFTs> {
     try {
@@ -154,6 +176,9 @@ export async function fetchCollectionNFTs(
             throw new Error('Collection has no metadata URI');
         }
 
+        // Add collection metadata fetch
+        const collectionMetadata = await fetchCollectionMetadata(buri);
+        
         const totalSupply = parseInt(maxSupply);
         const startToken = params?.offset ? parseInt(params.offset) : 0;
         const limit = params?.limit || DISPLAY_LIMIT;
@@ -301,6 +326,10 @@ export async function fetchCollectionNFTs(
             hasMore: startToken + limit < totalSupply,
             nextOffset: startToken + limit < totalSupply ? 
                 (startToken + limit).toString() : undefined,
+            collection: {
+                ...collectionResponse.result,
+                collectionMetadata: collectionMetadata || undefined
+            }
         };
     } catch (error) {
         console.error('Failed to fetch collection NFTs:', error);
