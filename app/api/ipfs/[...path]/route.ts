@@ -34,14 +34,11 @@ async function fetchWithTimeout(url: string): Promise<Response> {
     }
 }
 
-export async function GET(
-    request: NextRequest,
-    context: { params: { path: string[] } }
-) {
+export async function GET(request: NextRequest) {
     try {
-        // Properly await the params
-        const params = await Promise.resolve(context.params);
-        const pathSegments = params.path;
+        // Extract path from URL instead of params
+        const url = new URL(request.url);
+        const pathSegments = url.pathname.split('/').filter(Boolean).slice(2); // Remove 'api' and 'ipfs'
         const path = pathSegments.join('/');
         
         console.log('IPFS Request:', { path, segments: pathSegments });
