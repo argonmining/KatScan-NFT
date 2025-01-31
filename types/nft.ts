@@ -21,10 +21,37 @@ export interface NFTDisplay {
     isMinted: boolean;
 }
 
+export interface CollectionExtensions {
+    website?: string;
+    twitter?: string;
+    discord?: string;
+    telegram?: string;
+    youtube?: string;
+    tiktok?: string;
+    facebook?: string;
+    instagram?: string;
+    whatsapp?: string;
+    medium?: string;
+    linkedin?: string;
+    twitch?: string;
+    reddit?: string;
+    github?: string;
+}
+
+export interface CollectionProperties {
+    files: {
+        uri: string;
+        type: string;
+    }[];
+}
+
 export interface CollectionMetadata {
     name: string;
+    tick: string;
     description: string;
-    // Add other collection metadata fields as needed
+    image: string;
+    properties: CollectionProperties;
+    extensions: CollectionExtensions;
 }
 
 export interface CollectionInfo {
@@ -37,7 +64,7 @@ export interface CollectionInfo {
     daaMintStart?: string;
     premint?: string;
     state?: string;
-    metadata?: CollectionMetadata;
+    collectionMetadata?: CollectionMetadata;
 }
 
 export interface PaginatedNFTs {

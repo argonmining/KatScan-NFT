@@ -8,6 +8,7 @@ import type { MultiValue } from 'react-select'
 import AddressInfo from './address-info'
 import CollectionFilter from './collection-filter'
 import CollectionInfo from './collection-info'
+import { debounce } from 'lodash'
 
 interface InspirationProps {
   nfts: NFTDisplay[];
@@ -17,7 +18,7 @@ interface InspirationProps {
   searchType: 'collection' | 'address';
   searchValue: string;
   hasMore: boolean;
-  onLoadMoreAction: () => Promise<void>;
+  onLoadMoreAction: () => void;
   collection?: CollectionInfoType;
   hasSearched: boolean;
 }
@@ -57,6 +58,8 @@ export default function Inspiration({
   hasSearched
 }: InspirationProps) {
   const [filters, setFilters] = useState<FilterState>({});
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const [isIntersecting, setIsIntersecting] = useState(false);
 
   // Generate filter options from NFTs
   const filterOptions = useMemo(() => {
@@ -150,29 +153,54 @@ export default function Inspiration({
     }
   }, []); // Run once on component mount
 
-  // Update the intersection observer
-  const observerTarget = useRef<HTMLDivElement>(null);
+  // Debounce the load more action to prevent multiple calls
+  const debouncedLoadMore = useCallback(
+    debounce(() => {
+      if (!isLoadingMore && hasMore) {
+        onLoadMoreAction();
+      }
+    }, 250), // Increased debounce time for better performance
+    [isLoadingMore, hasMore, onLoadMoreAction]
+  );
 
+  // Update the intersection observer effect
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting && hasMore && !isLoadingMore) {
-          onLoadMoreAction();
+        const first = entries[0];
+        if (first.isIntersecting) {
+          setIsIntersecting(true);
+        } else {
+          setIsIntersecting(false);
         }
       },
       {
-        rootMargin: '100px',
-        threshold: 0.1
+        threshold: 0,
+        rootMargin: '200px' // Increased rootMargin for earlier loading
       }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
     }
 
-    return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, onLoadMoreAction]);
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+        observer.disconnect();
+      }
+    };
+  }, [nfts.length]); // Add nfts.length as dependency to reinitialize observer when new items are loaded
+
+  // Update the load more effect
+  useEffect(() => {
+    if (isIntersecting && hasMore && !isLoadingMore && nfts.length > 0) {
+      debouncedLoadMore();
+    }
+  }, [isIntersecting, hasMore, isLoadingMore, debouncedLoadMore, nfts.length]);
+
+  console.log('Inspiration collection prop:', collection);
 
   return (
     <div className="relative">
@@ -304,15 +332,21 @@ export default function Inspiration({
               ))}
             </div>
 
-            {/* Place the observer target at the bottom */}
+            {/* Loading indicator at bottom - Updated positioning */}
             {hasMore && (
               <div 
                 ref={observerTarget} 
-                className="h-10 mt-8 flex items-center justify-center"
-              >
-                {isLoadingMore && (
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-                )}
+                className="h-20 mt-8" // Increased height for better detection
+              />
+            )}
+            {isLoadingMore && (
+              <div className="mt-8 mb-4 flex justify-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+              </div>
+            )}
+            {!hasMore && nfts.length > 0 && (
+              <div className="mt-8 text-center text-gray-500">
+                End of collection
               </div>
             )}
 

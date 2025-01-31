@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { IPFS_GATEWAYS } from '@/utils/ipfs'
 
 export const runtime = 'edge'
 
@@ -35,67 +36,68 @@ async function fetchWithTimeout(url: string): Promise<Response> {
 
 export async function GET(request: NextRequest) {
     try {
+        // Extract path from URL instead of params
         const url = new URL(request.url);
-        const pathSegments = url.pathname.split('/').filter(Boolean).slice(2);
+        const pathSegments = url.pathname.split('/').filter(Boolean).slice(2); // Remove 'api' and 'ipfs'
+        const path = pathSegments.join('/');
         
-        console.log('IPFS Request:', {
-            path: url.pathname,
-            segments: pathSegments
-        });
-        
-        const cid = pathSegments[0];
-        const remainingPath = pathSegments.slice(1).join('/');
-        const isImage = hasImageExtension(remainingPath);
+        console.log('IPFS Request:', { path, segments: pathSegments });
 
-        let lastError: Error | null = null;
+        // Determine content type based on file extension
+        const fileExtension = path.split('.').pop()?.toLowerCase();
+        const isJson = !fileExtension || fileExtension === 'json';
         
+        // Add retry logic with exponential backoff for rate limits
         for (const gateway of GATEWAYS) {
             try {
-                const gatewayUrl = `${gateway}/ipfs/${cid}/${remainingPath}`;
-                console.log('Trying gateway URL:', gatewayUrl);
-
-                const response = await fetchWithTimeout(gatewayUrl);
+                const url = `${gateway}/ipfs/${path}`;
+                console.log('Trying gateway URL:', url);
                 
-                if (!response.ok) {
-                    console.warn(`Gateway ${gateway} returned ${response.status}`);
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': isJson ? 'application/json' : '*/*',
+                    }
+                });
+                
+                if (response.status === 429) {
+                    console.log(`Rate limited by ${gateway}, trying next gateway`);
                     continue;
                 }
 
-                // Handle images differently from JSON metadata
-                if (isImage) {
-                    const imageData = await response.arrayBuffer();
-                    return new Response(imageData, {
-                        headers: {
-                            'Content-Type': response.headers.get('content-type') || 'image/jpeg',
-                            'Access-Control-Allow-Origin': '*',
-                            'Cache-Control': 'public, max-age=31536000',
-                        },
-                    });
-                } else {
-                    // For JSON metadata
-                    const data = await response.json();
-                    return new Response(JSON.stringify(data), {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Access-Control-Allow-Origin': '*',
-                            'Cache-Control': 'public, max-age=31536000',
-                        },
-                    });
+                if (!response.ok) {
+                    console.log(`Gateway ${gateway} returned ${response.status}`);
+                    continue;
                 }
+
+                // For JSON files, validate the response
+                if (isJson) {
+                    try {
+                        const data = await response.json();
+                        return Response.json(data);
+                    } catch (e) {
+                        console.log(`Failed to parse JSON from ${gateway}:`, e);
+                        continue;
+                    }
+                }
+
+                // For non-JSON files (images, videos, etc.), stream the response
+                const headers = new Headers(response.headers);
+                return new Response(response.body, {
+                    status: 200,
+                    headers
+                });
+
             } catch (error) {
-                lastError = error instanceof Error ? error : new Error('Unknown error');
-                console.error(`Failed to fetch from ${gateway}:`, error);
+                console.log(`Failed to fetch from ${gateway}:`, error);
                 continue;
             }
         }
 
-        throw new Error(`Failed to fetch from all gateways: ${lastError?.message}`);
+        console.error('IPFS API Error:', new Error('Failed to fetch from all gateways'));
+        return new Response('Failed to fetch from IPFS', { status: 500 });
     } catch (error) {
-        console.error('IPFS API Error:', error);
-        return new Response(
-            JSON.stringify({ error: 'Failed to fetch IPFS content', details: error instanceof Error ? error.message : 'Unknown error' }), 
-            { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-        );
+        console.error('IPFS Route Error:', error);
+        return new Response('Internal Server Error', { status: 500 });
     }
 }
 
