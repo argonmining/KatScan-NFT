@@ -120,12 +120,23 @@ export async function fetchCollectionNFTs(
             if (nextBatchStart <= nextBatchEnd) {
                 await backgroundFetchMetadata(tick, buri, nextBatchStart, nextBatchEnd);
                 // Refresh cached collection after background fetch
-                cachedCollection = await CollectionCache.getCollection(tick);
+                const updatedCache = await CollectionCache.getCollection(tick);
+                if (!updatedCache) {
+                    throw new Error('Failed to retrieve updated cache after background fetch');
+                }
+                cachedCollection = updatedCache;
             }
         }
 
-        // Apply filters if any
+        // Add null check before accessing cachedCollection
+        if (!cachedCollection) {
+            throw new Error('Failed to load or update collection cache');
+        }
+
+        // Now TypeScript knows cachedCollection is not null
         let filteredTokenIds = Object.keys(cachedCollection.metadata);
+
+        // Apply filters if any
         if (params?.filters && Object.keys(params.filters).length > 0) {
             filteredTokenIds = filteredTokenIds.filter(tokenId => {
                 const metadata = cachedCollection!.metadata[tokenId];
