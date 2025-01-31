@@ -462,99 +462,134 @@ interface AddressCollection {
 
 const BATCH_SIZE = 10; // Process 10 NFTs at a time
 
+// First, let's add the necessary interfaces
+interface AddressHolding {
+    tick: string;
+    tokenId: string;
+    owner: string;
+}
+
+interface AddressHoldingsResponse {
+    holdings: AddressHolding[];
+}
+
+// Add interface for address NFT response
+interface AddressNFT {
+    tick: string;
+    tokenId: string;
+    owner: string;
+}
+
+// Add a delay utility function
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function fetchAddressNFTs(
     address: string,
     params?: { limit?: number; offset?: string }
 ): Promise<PaginatedNFTs> {
     try {
         const offset = params?.offset ? parseInt(params.offset) : 0;
-        const limit = params?.limit || 24;
+        const limit = params?.limit || DISPLAY_LIMIT;
 
-        // 1. Get all owned NFTs first
-        const collections = await krc721Api.getAddressCollections(address);
+        // Get all NFTs for the address with error handling
+        const addressNFTs = await krc721Api.getAddressNFTs(address);
         
-        // 2. Create flat list of all owned tokens with their collection info
-        const allOwnedTokens = collections.flatMap(collection => 
-            collection.tokens.map(token => ({
-                tick: collection.tick,
-                tokenId: token.tokenId,
-                owner: token.owner
-            }))
-        );
+        // Early return if no NFTs found
+        if (!addressNFTs?.length) {
+            return { 
+                nfts: [], 
+                hasMore: false,
+                nextOffset: undefined
+            };
+        }
 
-        // 3. Apply pagination BEFORE fetching any metadata
-        const paginatedTokens = allOwnedTokens.slice(offset, offset + limit);
+        console.log(`Found ${addressNFTs.length} NFTs for address ${address}`);
 
-        // 4. Only fetch URIs for collections we need (from paginated tokens)
-        const neededCollections = new Set(paginatedTokens.map(token => token.tick));
-        const collectionUris = new Map<string, string>();
+        // Only process the current page of NFTs
+        const startIdx = offset;
+        const endIdx = Math.min(startIdx + limit, addressNFTs.length);
+        const currentBatch = addressNFTs.slice(startIdx, endIdx);
+
+        console.log(`Processing NFTs ${startIdx + 1} to ${endIdx} of ${addressNFTs.length}`);
+
+        // Create a map to store collection metadata to avoid duplicate fetches
+        const collectionMetadataMap = new Map<string, any>();
+
+        // Process NFTs in sequence with proper error handling and retries
+        const processedNFTs: NFTDisplay[] = [];
         
-        // Convert Set to Array before iteration
-        for (const tick of Array.from(neededCollections)) {
+        for (const holding of currentBatch) {
             try {
-                const collectionInfo = await krc721Api.getCollectionDetails(tick);
-                if (collectionInfo?.result?.buri) {
-                    collectionUris.set(tick, collectionInfo.result.buri);
+                // Get collection details (reuse if already fetched)
+                let collectionDetails = collectionMetadataMap.get(holding.tick);
+                if (!collectionDetails) {
+                    collectionDetails = await krc721Api.getCollectionDetails(holding.tick);
+                    if (collectionDetails?.result?.buri) {
+                        collectionMetadataMap.set(holding.tick, collectionDetails);
+                    }
                 }
+
+                if (!collectionDetails?.result?.buri) {
+                    console.error(`No metadata URI found for collection ${holding.tick}`);
+                    continue;
+                }
+
+                // Add delay between requests
+                await delay(500);
+
+                const metadata = await fetchMetadataWithRetry(
+                    collectionDetails.result.buri,
+                    holding.tokenId,
+                    2 // Reduce retry attempts
+                );
+
+                if (!metadata) {
+                    console.error(`No metadata found for token ${holding.tick}-${holding.tokenId}`);
+                    // Add placeholder metadata instead of skipping
+                    processedNFTs.push({
+                        tick: holding.tick,
+                        id: holding.tokenId,
+                        owner: holding.owner,
+                        metadata: {
+                            name: `${holding.tick} #${holding.tokenId}`,
+                            description: 'Metadata unavailable',
+                            image: '',
+                            imageUrl: '',
+                            edition: parseInt(holding.tokenId),
+                            attributes: []
+                        },
+                        isMinted: true
+                    });
+                    continue;
+                }
+
+                processedNFTs.push({
+                    tick: holding.tick,
+                    id: holding.tokenId,
+                    owner: holding.owner,
+                    metadata: {
+                        name: metadata.name || `${holding.tick} #${holding.tokenId}`,
+                        description: metadata.description || '',
+                        image: metadata.image || '',
+                        imageUrl: metadata.image?.startsWith('ipfs://')
+                            ? `/api/ipfs/${metadata.image.replace('ipfs://', '')}`
+                            : metadata.image,
+                        edition: metadata.edition || parseInt(holding.tokenId),
+                        attributes: metadata.attributes || []
+                    },
+                    isMinted: true
+                });
+
             } catch (error) {
-                console.error(`Failed to fetch collection details for ${tick}:`, error);
+                console.error(`Failed to process NFT ${holding.tick}-${holding.tokenId}:`, error);
+                continue;
             }
         }
 
-        // 5. Fetch metadata only for paginated tokens, with retry logic
-        const nftPromises = paginatedTokens.map(async ({ tick, tokenId, owner }) => {
-            try {
-                const buri = collectionUris.get(tick);
-                if (!buri) return {
-                    tick,
-                    id: tokenId,
-                    owner,
-                    metadata: null,
-                    isMinted: true
-                };
-
-                // Try to get from collection cache first
-                const cachedCollection = await CollectionCache.getCollection(tick);
-                if (cachedCollection?.metadata[tokenId]) {
-                    return {
-                        tick,
-                        id: tokenId,
-                        owner,
-                        metadata: cachedCollection.metadata[tokenId],
-                        isMinted: true
-                    };
-                }
-
-                const metadata = await getIPFSContent(`${buri}/${tokenId}`);
-                return {
-                    tick,
-                    id: tokenId,
-                    owner,
-                    metadata: metadata || null,
-                    isMinted: true
-                };
-            } catch (error) {
-                console.error(`Failed to fetch metadata for ${tick} ${tokenId}:`, error);
-                return {
-                    tick,
-                    id: tokenId,
-                    owner,
-                    metadata: null,
-                    isMinted: true
-                };
-            }
-        });
-
-        const nfts = await Promise.all(nftPromises);
-
-        // Filter out null metadata if you want, or keep them to show placeholders
-        const validNfts = nfts.filter(nft => nft.metadata !== null);
-
         return {
-            nfts: validNfts,
-            hasMore: offset + limit < allOwnedTokens.length,
-            nextOffset: offset + limit < allOwnedTokens.length ? 
-                (offset + limit).toString() : undefined
+            nfts: processedNFTs,
+            hasMore: endIdx < addressNFTs.length,
+            nextOffset: endIdx < addressNFTs.length ? endIdx.toString() : undefined
         };
     } catch (error) {
         console.error('Failed to fetch address NFTs:', error);
@@ -562,4 +597,27 @@ export async function fetchAddressNFTs(
             `Unable to find NFTs for address "${address}". Please verify the address and try again.`
         );
     }
+}
+
+// Helper function to fetch metadata with retries
+async function fetchMetadataWithRetry(
+    buri: string,
+    tokenId: string,
+    maxRetries: number
+): Promise<any> {
+    let lastError = null;
+    
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const metadata = await fetchMetadataWithFallback(buri, tokenId);
+            return metadata;
+        } catch (error) {
+            console.error(`Attempt ${i + 1} failed for ${tokenId}:`, error);
+            lastError = error;
+            // Add exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        }
+    }
+    
+    throw lastError;
 } 

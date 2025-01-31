@@ -135,10 +135,40 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="text-sm font-medium text-gray-500 mb-1">Pre-Minted</div>
               <div className="text-xl font-bold text-gray-900">
-                {collection.premint || '0'}
+                {parseInt(collection.premint || '0') > 0 
+                  ? collection.premint 
+                  : 'Fair Launch'}
               </div>
             </div>
           </div>
+
+          {/* Royalty Recipient */}
+          {collection.royaltyTo && (
+            <div className="mb-8">
+              <div className="text-sm font-medium text-gray-500 mb-2">Royalty Recipient</div>
+              <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-4">
+                <a 
+                  href={`https://kas.fyi/address/${collection.royaltyTo}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-sm text-gray-600 hover:text-blue-600 break-all transition-colors"
+                >
+                  {collection.royaltyTo}
+                </a>
+                <button 
+                  onClick={() => collection.royaltyTo && navigator.clipboard.writeText(collection.royaltyTo)}
+                  className="shrink-0 text-blue-500 hover:text-blue-600 transition-colors"
+                  title="Copy address"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" 
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Social Links */}
           {metadata?.extensions && (
