@@ -32,9 +32,8 @@ interface IPFSMetadata {
 // Prioritized list of gateways - order matters for performance
 const IPFS_GATEWAYS = [
     'https://w3s.link/ipfs/',
-    PINATA_GATEWAY + '/ipfs/',
-    'https://cloudflare-ipfs.com/ipfs/',
-    'https://ipfs.io/ipfs/'
+    'https://ipfs.io/ipfs/',
+    PINATA_GATEWAY + '/ipfs/'
 ];
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
