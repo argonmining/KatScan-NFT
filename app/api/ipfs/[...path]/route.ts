@@ -34,65 +34,74 @@ async function fetchWithTimeout(url: string): Promise<Response> {
     }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
-    // Ensure params is properly awaited
-    const pathSegments = await Promise.resolve(params.path);
-    const path = pathSegments.join('/');
-    
-    console.log('IPFS Request:', { path, segments: pathSegments });
+export async function GET(
+    request: NextRequest,
+    context: { params: { path: string[] } }
+) {
+    try {
+        // Properly await the params
+        const params = await Promise.resolve(context.params);
+        const pathSegments = params.path;
+        const path = pathSegments.join('/');
+        
+        console.log('IPFS Request:', { path, segments: pathSegments });
 
-    // Determine content type based on file extension
-    const fileExtension = path.split('.').pop()?.toLowerCase();
-    const isJson = !fileExtension || fileExtension === 'json';
-    
-    // Add retry logic with exponential backoff for rate limits
-    for (const gateway of GATEWAYS) {
-        try {
-            const url = `${gateway}/ipfs/${path}`;
-            console.log('Trying gateway URL:', url);
-            
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': isJson ? 'application/json' : '*/*',
-                }
-            });
-            
-            if (response.status === 429) {
-                console.log(`Rate limited by ${gateway}, trying next gateway`);
-                continue;
-            }
-
-            if (!response.ok) {
-                console.log(`Gateway ${gateway} returned ${response.status}`);
-                continue;
-            }
-
-            // For JSON files, validate the response
-            if (isJson) {
-                try {
-                    const data = await response.json();
-                    return Response.json(data);
-                } catch (e) {
-                    console.log(`Failed to parse JSON from ${gateway}:`, e);
+        // Determine content type based on file extension
+        const fileExtension = path.split('.').pop()?.toLowerCase();
+        const isJson = !fileExtension || fileExtension === 'json';
+        
+        // Add retry logic with exponential backoff for rate limits
+        for (const gateway of GATEWAYS) {
+            try {
+                const url = `${gateway}/ipfs/${path}`;
+                console.log('Trying gateway URL:', url);
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': isJson ? 'application/json' : '*/*',
+                    }
+                });
+                
+                if (response.status === 429) {
+                    console.log(`Rate limited by ${gateway}, trying next gateway`);
                     continue;
                 }
+
+                if (!response.ok) {
+                    console.log(`Gateway ${gateway} returned ${response.status}`);
+                    continue;
+                }
+
+                // For JSON files, validate the response
+                if (isJson) {
+                    try {
+                        const data = await response.json();
+                        return Response.json(data);
+                    } catch (e) {
+                        console.log(`Failed to parse JSON from ${gateway}:`, e);
+                        continue;
+                    }
+                }
+
+                // For non-JSON files (images, videos, etc.), stream the response
+                const headers = new Headers(response.headers);
+                return new Response(response.body, {
+                    status: 200,
+                    headers
+                });
+
+            } catch (error) {
+                console.log(`Failed to fetch from ${gateway}:`, error);
+                continue;
             }
-
-            // For non-JSON files (images, videos, etc.), stream the response
-            const headers = new Headers(response.headers);
-            return new Response(response.body, {
-                status: 200,
-                headers
-            });
-
-        } catch (error) {
-            console.log(`Failed to fetch from ${gateway}:`, error);
-            continue;
         }
-    }
 
-    console.error('IPFS API Error:', new Error('Failed to fetch from all gateways'));
-    return new Response('Failed to fetch from IPFS', { status: 500 });
+        console.error('IPFS API Error:', new Error('Failed to fetch from all gateways'));
+        return new Response('Failed to fetch from IPFS', { status: 500 });
+    } catch (error) {
+        console.error('IPFS Route Error:', error);
+        return new Response('Internal Server Error', { status: 500 });
+    }
 }
 
 export async function OPTIONS() {
