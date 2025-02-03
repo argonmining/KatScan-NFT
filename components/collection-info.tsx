@@ -1,14 +1,22 @@
 import { CollectionInfo as CollectionInfoType } from '@/types/nft'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
     FaTwitter, FaDiscord, FaTelegram, FaYoutube, FaTiktok,
     FaFacebook, FaInstagram, FaMedium, FaLinkedin, FaTwitch,
     FaReddit, FaGithub, FaGlobe
 } from 'react-icons/fa'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 interface CollectionInfoProps {
   collection: CollectionInfoType;
+}
+
+interface MarketData {
+  floor_price: number;
+  total_volume: number;
+  volume_24h: number;
+  change_24h: number;
 }
 
 export default function CollectionInfo({ collection }: CollectionInfoProps) {
@@ -18,6 +26,23 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
   const mintedCount = parseInt(collection.minted);
   const totalSupply = parseInt(collection.max);
   const progress = (mintedCount / totalSupply) * 100;
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+
+  useEffect(() => {
+    async function fetchMarketData() {
+      try {
+        const response = await fetch('/api/markets');
+        const data = await response.json();
+        if (data[collection.tick]) {
+          setMarketData(data[collection.tick]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch market data:', error);
+      }
+    }
+
+    fetchMarketData();
+  }, [collection.tick]);
 
   // Helper function to convert IPFS URLs
   const getProperUrl = (ipfsUrl: string) => {
@@ -123,6 +148,51 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
               />
             </div>
           </div>
+
+          {/* Add Market Stats after the progress bar */}
+          {marketData && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Market Statistics</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Floor Price */}
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <div className="text-sm font-medium text-blue-600 mb-1">Floor Price</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {marketData.floor_price.toLocaleString()} KAS
+                  </div>
+                </div>
+
+                {/* 24h Volume */}
+                <div className="bg-purple-50 rounded-xl p-4">
+                  <div className="text-sm font-medium text-purple-600 mb-1">24h Volume</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {marketData.volume_24h.toLocaleString()} KAS
+                  </div>
+                </div>
+
+                {/* Total Volume */}
+                <div className="bg-green-50 rounded-xl p-4">
+                  <div className="text-sm font-medium text-green-600 mb-1">Total Volume</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {marketData.total_volume.toLocaleString()} KAS
+                  </div>
+                </div>
+
+                {/* 24h Change */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="text-sm font-medium text-gray-600 mb-1">24h Change</div>
+                  <div className={`text-xl font-bold flex items-center gap-1 ${
+                    marketData.change_24h > 0 ? 'text-green-600' : 
+                    marketData.change_24h < 0 ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    {marketData.change_24h > 0 ? <TrendingUp className="w-5 h-5" /> : 
+                     marketData.change_24h < 0 ? <TrendingDown className="w-5 h-5" /> : null}
+                    {marketData.change_24h.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 mb-8">
