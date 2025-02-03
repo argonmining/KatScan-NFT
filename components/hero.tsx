@@ -60,14 +60,11 @@ export default function Hero({
                 <div className="flex space-x-4 mb-4">
                   <button
                     onClick={() => onSearchTypeChangeAction('collection')}
-                    className={`px-4 py-2 rounded ${
-                      searchType === 'collection' 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-200'
-                    }`}
+                    className="px-4 py-2 rounded bg-blue-500 text-white"
                   >
                     Collection
                   </button>
+                  {/* Temporarily disabled address search
                   <button
                     onClick={() => onSearchTypeChangeAction('address')}
                     className={`px-4 py-2 rounded ${
@@ -78,6 +75,7 @@ export default function Hero({
                   >
                     Address
                   </button>
+                  */}
                 </div>
 
                 {/* Search Input */}
@@ -87,11 +85,7 @@ export default function Hero({
                       type="text"
                       value={searchValue}
                       onChange={(e) => onSearchValueChangeAction(e.target.value)}
-                      placeholder={
-                        searchType === 'collection'
-                          ? 'Enter a collection ticker to search...'
-                          : 'Enter a Kaspa address to search...'
-                      }
+                      placeholder="Enter a collection ticker to search..."
                       className="w-full px-6 py-4 text-sm font-mono bg-white border-2 border-gray-200 
                                rounded-xl shadow-sm transition-all duration-200 
                                focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500

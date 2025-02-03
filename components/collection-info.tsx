@@ -50,7 +50,9 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
             {metadata?.image ? (
               <>
                 <Image
-                  src={getProperUrl(metadata.image)}
+                  src={metadata.image.startsWith('ipfs://') 
+                    ? `/api/ipfs/${metadata.image.replace('ipfs://', '')}`
+                    : metadata.image}
                   alt={metadata.name}
                   fill
                   className="object-contain hover:scale-105 transition-transform duration-300"
