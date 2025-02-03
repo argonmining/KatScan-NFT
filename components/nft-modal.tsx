@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NFTDisplay } from '@/types/nft'
 import { XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 
@@ -12,6 +12,30 @@ interface NFTModalProps {
 
 export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) {
     const [showTraits, setShowTraits] = useState(false);
+    const [ownerStatus, setOwnerStatus] = useState<string | null>(null);
+    const [isLoadingOwner, setIsLoadingOwner] = useState(false);
+
+    // Load owner information when modal opens
+    useEffect(() => {
+        async function loadOwnerData() {
+            if (!isOpen || ownerStatus) return;
+            
+            setIsLoadingOwner(true);
+            try {
+                const ownerResponse = await fetch(`/api/krc721/nfts/${nft.tick}/token/${nft.id}`);
+                if (ownerResponse.ok) {
+                    const ownerData = await ownerResponse.json();
+                    setOwnerStatus(ownerData.result?.owner || null);
+                }
+            } catch (error) {
+                console.error('Failed to load owner data:', error);
+            } finally {
+                setIsLoadingOwner(false);
+            }
+        }
+
+        loadOwnerData();
+    }, [isOpen, nft.id, nft.tick, ownerStatus]);
 
     const handleClose = async () => {
         await onCloseAction();
@@ -158,6 +182,27 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Update owner display section */}
+                        <div className="mt-4">
+                            <h4 className="text-sm font-medium text-gray-500">Owner</h4>
+                            <div className="mt-1">
+                                {isLoadingOwner ? (
+                                    <div className="animate-pulse h-6 bg-gray-200 rounded w-48" />
+                                ) : ownerStatus ? (
+                                    <a
+                                        href={`https://kas.fyi/address/${ownerStatus}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-500 hover:text-blue-600 break-all"
+                                    >
+                                        {ownerStatus}
+                                    </a>
+                                ) : (
+                                    <span className="text-gray-500">Not available</span>
+                                )}
                             </div>
                         </div>
                     </div>

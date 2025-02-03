@@ -15,7 +15,6 @@ export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [imageHeight, setImageHeight] = useState<number>(0);
     const [metadata, setMetadata] = useState(nft.metadata);
-    const [ownerStatus, setOwnerStatus] = useState(nft.owner);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleCloseAction = async () => {
@@ -35,23 +34,15 @@ export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
             
             setIsLoading(true);
             try {
-                // Load metadata and owner status only when card becomes visible
-                const [metadataResponse, ownerResponse] = await Promise.all([
-                    fetch(`/api/ipfs/${nft.tick}/${nft.id}`),
-                    fetch(`/api/krc721/nfts/${nft.tick}/token/${nft.id}`)
-                ]);
+                // Only load metadata when card becomes visible
+                const metadataResponse = await fetch(`/api/ipfs/${nft.tick}/${nft.id}`);
 
                 if (metadataResponse.ok) {
                     const newMetadata = await metadataResponse.json();
                     setMetadata(newMetadata);
                 }
-
-                if (ownerResponse.ok) {
-                    const ownerData = await ownerResponse.json();
-                    setOwnerStatus(ownerData.result?.owner);
-                }
             } catch (error) {
-                console.error('Failed to load NFT data:', error);
+                console.error('Failed to load NFT metadata:', error);
             } finally {
                 setIsLoading(false);
             }
