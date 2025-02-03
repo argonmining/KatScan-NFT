@@ -1,17 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { NFTDisplay } from '@/types/nft'
 import NFTModal from './nft-modal'
+import NFTCardSkeleton from './nft-card-skeleton'
 
 interface NFTCardProps {
     nft: NFTDisplay;
+    loadMetadata?: boolean;
 }
 
-export default function NFTCard({ nft }: NFTCardProps) {
+export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [imageHeight, setImageHeight] = useState<number>(0);
+    const [metadata, setMetadata] = useState(nft.metadata);
+    const [ownerStatus, setOwnerStatus] = useState(nft.owner);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleCloseAction = async () => {
         setIsModalOpen(false);
@@ -23,6 +28,42 @@ export default function NFTCard({ nft }: NFTCardProps) {
         const aspectRatio = (img.naturalHeight / img.naturalWidth) * 100;
         setImageHeight(aspectRatio);
     };
+
+    useEffect(() => {
+        async function loadNFTData() {
+            if (!loadMetadata || metadata) return;
+            
+            setIsLoading(true);
+            try {
+                // Load metadata and owner status only when card becomes visible
+                const [metadataResponse, ownerResponse] = await Promise.all([
+                    fetch(`/api/ipfs/${nft.tick}/${nft.id}`),
+                    fetch(`/api/krc721/nfts/${nft.tick}/token/${nft.id}`)
+                ]);
+
+                if (metadataResponse.ok) {
+                    const newMetadata = await metadataResponse.json();
+                    setMetadata(newMetadata);
+                }
+
+                if (ownerResponse.ok) {
+                    const ownerData = await ownerResponse.json();
+                    setOwnerStatus(ownerData.result?.owner);
+                }
+            } catch (error) {
+                console.error('Failed to load NFT data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        loadNFTData();
+    }, [loadMetadata, nft.id, nft.tick, metadata]);
+
+    // Show loading skeleton while fetching data
+    if (isLoading) {
+        return <NFTCardSkeleton />;
+    }
 
     return (
         <>

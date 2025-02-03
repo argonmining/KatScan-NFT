@@ -200,6 +200,35 @@ export default function Inspiration({
     }
   }, [isIntersecting, hasMore, isLoadingMore, debouncedLoadMore, nfts.length]);
 
+  // Add new intersection observer for NFT cards
+  const [visibleNFTs, setVisibleNFTs] = useState(new Set<string>());
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const nftId = entry.target.getAttribute('data-nft-id');
+            if (nftId) {
+              setVisibleNFTs(prev => new Set(prev).add(nftId));
+            }
+          }
+        });
+      },
+      {
+        rootMargin: '50px',
+        threshold: 0.1
+      }
+    );
+
+    // Observe all NFT cards
+    document.querySelectorAll('[data-nft-id]').forEach(card => {
+      observer.observe(card);
+    });
+
+    return () => observer.disconnect();
+  }, [nfts]); // Reset when NFTs change
+
   console.log('Inspiration collection prop:', collection);
 
   return (
@@ -324,10 +353,14 @@ export default function Inspiration({
             <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-4 lg:grid-cols-4">
               {filteredNFTs.map((nft) => (
                 <div 
-                  key={`${nft.tick}-${nft.id}`} 
+                  key={`${nft.tick}-${nft.id}`}
+                  data-nft-id={`${nft.tick}-${nft.id}`}
                   className="relative w-full h-fit"
                 >
-                  <NFTCard nft={nft} />
+                  <NFTCard 
+                    nft={nft} 
+                    loadMetadata={visibleNFTs.has(`${nft.tick}-${nft.id}`)}
+                  />
                 </div>
               ))}
             </div>

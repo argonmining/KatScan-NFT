@@ -6,15 +6,15 @@ import { NFTDisplay, TraitFilter, FilterState } from '@/types/nft'
 interface NFTFiltersProps {
     nfts: NFTDisplay[];
     selectedFilters: FilterState;
-    onFilterToggle: (trait_type: string, value: string) => void;
-    onReset: () => void;
+    onFilterToggleAction: (trait_type: string, value: string) => void;
+    onResetAction: () => void;
 }
 
 export default function NFTFilters({ 
     nfts, 
     selectedFilters, 
-    onFilterToggle, 
-    onReset 
+    onFilterToggleAction, 
+    onResetAction 
 }: NFTFiltersProps) {
     const availableTraits = useMemo(() => {
         const traits: { trait_type: string; values: Set<string> }[] = [];
@@ -44,7 +44,7 @@ export default function NFTFilters({
                 <h3 className="text-lg font-semibold">Filters</h3>
                 {Object.keys(selectedFilters).length > 0 && (
                     <button 
-                        onClick={onReset}
+                        onClick={onResetAction}
                         className="text-sm text-blue-500 hover:text-blue-600"
                     >
                         Reset All
@@ -65,7 +65,7 @@ export default function NFTFilters({
                         {Array.from(values).map(value => (
                             <button
                                 key={value}
-                                onClick={() => onFilterToggle(trait_type, value)}
+                                onClick={() => onFilterToggleAction(trait_type, value)}
                                 className={`px-3 py-1 rounded-full text-sm ${
                                     selectedFilters[trait_type]?.has(value)
                                         ? 'bg-blue-500 text-white'

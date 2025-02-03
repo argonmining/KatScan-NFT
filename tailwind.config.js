@@ -49,12 +49,17 @@ module.exports = {
       },
       animation: {
         scroll: 'scroll 20s linear infinite',
+        shimmer: 'shimmer 1.5s infinite linear'
       },
       keyframes: {
         scroll: {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-100%)' },
         },
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' }
+        }
       },
     },
   },
