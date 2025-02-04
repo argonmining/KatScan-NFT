@@ -69,7 +69,7 @@ export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
                         {nft.metadata.imageUrl && (
                             <div className="relative w-full h-full group">
                                 {/* Decorative frame */}
-                                <div className="absolute inset-0 rounded-lg border-4 border-gray-100 shadow-lg bg-white">
+                                <div className="absolute inset-0 rounded-lg border-4 border-gray-800 shadow-lg bg-gray-900">
                                     <div className="relative w-full h-full flex items-center justify-center">
                                         <img
                                             src={nft.metadata.imageUrl}
@@ -90,7 +90,7 @@ export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
                                 </div>
 
                                 {/* Title overlay */}
-                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-lg">
+                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent rounded-b-lg">
                                     <h3 className="text-white font-semibold truncate">
                                         {nft.metadata.name}
                                     </h3>

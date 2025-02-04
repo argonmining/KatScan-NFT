@@ -70,8 +70,8 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 mb-8">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Column - Image and Video */}
-        <div className="w-full md:w-1/3 min-h-[300px] md:min-h-[400px]">
-          <div className="relative w-full h-full rounded-xl overflow-hidden bg-gray-50">
+        <div className="w-full md:w-1/3">
+          <div className="relative w-full pt-[100%] rounded-xl overflow-hidden bg-gray-50 image-container">
             {metadata?.image ? (
               <>
                 <Image
@@ -80,8 +80,15 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
                     : metadata.image}
                   alt={metadata.name}
                   fill
-                  className="object-contain hover:scale-105 transition-transform duration-300"
+                  className="object-contain"
                   sizes="(max-width: 768px) 100vw, 33vw"
+                  onLoadingComplete={({ naturalWidth, naturalHeight }) => {
+                    const aspectRatio = (naturalHeight / naturalWidth) * 100;
+                    const container = document.querySelector('.image-container') as HTMLDivElement;
+                    if (container) {
+                      container.style.paddingTop = `${aspectRatio}%`;
+                    }
+                  }}
                 />
                 {videoFile && (
                   <button

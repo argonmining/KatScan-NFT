@@ -41,11 +41,11 @@ export default function NFTFilters({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Filters</h3>
+                <h3 className="text-lg font-semibold text-white">Filters</h3>
                 {Object.keys(selectedFilters).length > 0 && (
                     <button 
                         onClick={onResetAction}
-                        className="text-sm text-blue-500 hover:text-blue-600"
+                        className="text-sm text-blue-400 hover:text-blue-300"
                     >
                         Reset All
                     </button>
@@ -54,7 +54,7 @@ export default function NFTFilters({
             {availableTraits.map(({ trait_type, values }) => (
                 <div key={trait_type} className="space-y-2">
                     <div className="flex justify-between items-center">
-                        <h4 className="font-medium text-gray-700">{trait_type}</h4>
+                        <h4 className="font-medium text-gray-300">{trait_type}</h4>
                         {selectedFilters[trait_type] && (
                             <span className="text-xs text-gray-500">
                                 {selectedFilters[trait_type].size} selected
@@ -69,7 +69,7 @@ export default function NFTFilters({
                                 className={`px-3 py-1 rounded-full text-sm ${
                                     selectedFilters[trait_type]?.has(value)
                                         ? 'bg-blue-500 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200'
+                                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
                                 }`}
                             >
                                 {value}

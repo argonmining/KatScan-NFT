@@ -41,16 +41,16 @@ export default function Hero({
   return (
     <section className="relative">
       {/* Bg */}
-      <div className="absolute inset-0 bg-gray-50 pointer-events-none -z-10" aria-hidden="true" />
+      <div className="absolute inset-0 bg-gray-950 pointer-events-none -z-10" aria-hidden="true" />
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="pt-32 pb-12 md:pt-40 md:pb-20">
           {/* Hero content */}
           <div className="text-center pb-12 md:pb-16">
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tighter tracking-tighter mb-4">
+            <h1 className="text-5xl md:text-6xl font-extrabold leading-tighter tracking-tighter mb-4 text-white">
               Explore <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">KRC-721</span> NFTs
             </h1>
             <div className="max-w-3xl mx-auto">
-              <p className="text-xl text-gray-600 mb-8">
+              <p className="text-xl text-gray-400 mb-8">
                 Search for KRC-721 NFTs by collection or address
               </p>
               
@@ -60,7 +60,7 @@ export default function Hero({
                 <div className="flex space-x-4 mb-4">
                   <button
                     onClick={() => onSearchTypeChangeAction('collection')}
-                    className="px-4 py-2 rounded bg-blue-500 text-white"
+                    className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600"
                   >
                     Collection
                   </button>
@@ -86,20 +86,21 @@ export default function Hero({
                       value={searchValue}
                       onChange={(e) => onSearchValueChangeAction(e.target.value)}
                       placeholder="Enter a collection ticker to search..."
-                      className="w-full px-6 py-4 text-sm font-mono bg-white border-2 border-gray-200 
-                               rounded-xl shadow-sm transition-all duration-200 
+                      className="w-full px-6 py-4 text-sm font-mono bg-gray-900 border-2 border-gray-800 
+                               rounded-xl shadow-sm transition-all duration-200 text-white
                                focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
-                               disabled:bg-gray-50 disabled:cursor-not-allowed
-                               placeholder:text-gray-400"
+                               disabled:bg-gray-800 disabled:cursor-not-allowed
+                               placeholder:text-gray-600"
                       disabled={isLoading}
                     />
                     <button
                       type="submit"
                       disabled={isLoading || !searchValue.trim()}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2
-                               text-gray-400 hover:text-blue-500 disabled:text-gray-300
+                               text-gray-500 hover:text-blue-500 disabled:text-gray-700
                                transition-colors duration-200 rounded-lg
-                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                               focus:ring-offset-gray-900"
                     >
                       {isLoading ? (
                         <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />
