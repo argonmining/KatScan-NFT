@@ -39,7 +39,7 @@ export default function NFTFilters({
     if (availableTraits.length === 0) return null;
 
     return (
-        <div className="space-y-4 bg-gray-900 p-4 rounded-lg border border-gray-800">
+        <div className="space-y-4 bg-[#141519] p-4 rounded-lg border border-gray-800">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-white">Filters</h3>
                 {Object.keys(selectedFilters).length > 0 && (

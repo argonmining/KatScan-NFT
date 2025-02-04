@@ -234,7 +234,7 @@ export default function Inspiration({
   return (
     <div className="relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="bg-gray-900 min-h-screen">
+        <div className="bg-[#0a0b0f] min-h-screen">
           <div className="pt-8 md:pt-12">
             {/* Only show Address Info after search is executed */}
             {searchType === 'address' && hasSearched && (

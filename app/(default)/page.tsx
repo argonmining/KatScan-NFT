@@ -188,7 +188,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-[#0a0b0f]">
       <Hero
         isLoading={isLoading}
         searchType={searchType}

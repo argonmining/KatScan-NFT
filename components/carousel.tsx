@@ -63,7 +63,7 @@ export default function Carousel() {
   }, [])
 
   return (
-    <section className="bg-gray-950">
+    <section className="bg-[#0a0b0f]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="py-12 md:py-20">
           <div className="max-w-3xl mx-auto text-center pb-12 md:pb-20">
@@ -76,7 +76,7 @@ export default function Carousel() {
             <div className="swiper-wrapper">
               {/* Carousel slides */}
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel01}
@@ -84,32 +84,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 01"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar01}
                         width={36}
                         height={36}
                         alt="Avatar 01"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar02}
                         width={36}
                         height={36}
                         alt="Avatar 02"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar03}
                         width={36}
                         height={36}
                         alt="Avatar 03"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar04}
                         width={36}
                         height={36}
@@ -128,7 +128,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel02}
@@ -136,32 +136,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 02"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar05}
                         width={36}
                         height={36}
                         alt="Avatar 05"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar06}
                         width={36}
                         height={36}
                         alt="Avatar 06"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar07}
                         width={36}
                         height={36}
                         alt="Avatar 07"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar08}
                         width={36}
                         height={36}
@@ -180,7 +180,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel03}
@@ -188,32 +188,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 03"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar09}
                         width={36}
                         height={36}
                         alt="Avatar 09"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar08}
                         width={36}
                         height={36}
                         alt="Avatar 08"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar10}
                         width={36}
                         height={36}
                         alt="Avatar 10"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar11}
                         width={36}
                         height={36}
@@ -232,7 +232,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel04}
@@ -240,32 +240,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 04"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar18}
                         width={36}
                         height={36}
                         alt="Avatar 18"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar08}
                         width={36}
                         height={36}
                         alt="Avatar 08"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar01}
                         width={36}
                         height={36}
                         alt="Avatar 01"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar11}
                         width={36}
                         height={36}
@@ -284,7 +284,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel05}
@@ -292,32 +292,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 05"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar09}
                         width={36}
                         height={36}
                         alt="Avatar 09"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar12}
                         width={36}
                         height={36}
                         alt="Avatar 12"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar13}
                         width={36}
                         height={36}
                         alt="Avatar 13"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar14}
                         width={36}
                         height={36}
@@ -336,7 +336,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel06}
@@ -344,32 +344,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 06"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar15}
                         width={36}
                         height={36}
                         alt="Avatar 01"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar11}
                         width={36}
                         height={36}
                         alt="Avatar 11"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar16}
                         width={36}
                         height={36}
                         alt="Avatar 16"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar17}
                         width={36}
                         height={36}
@@ -388,7 +388,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel07}
@@ -396,32 +396,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 07"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar09}
                         width={36}
                         height={36}
                         alt="Avatar 09"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar18}
                         width={36}
                         height={36}
                         alt="Avatar 18"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar10}
                         width={36}
                         height={36}
                         alt="Avatar 10"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar05}
                         width={36}
                         height={36}
@@ -440,7 +440,7 @@ export default function Carousel() {
                 </div>
               </div>
               <div className="swiper-slide h-auto">
-                <div className="relative flex flex-col h-full bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+                <div className="relative flex flex-col h-full bg-[#141519] rounded-lg shadow-lg overflow-hidden border border-gray-800">
                   <Image 
                     className="w-full aspect-[7/4] object-cover"
                     src={Carousel08}
@@ -448,32 +448,32 @@ export default function Carousel() {
                     height={148}
                     alt="Carousel 08"
                   />
-                  <div className="grow bg-gray-900 px-4 pb-6">
+                  <div className="grow bg-[#141519] px-4 pb-6">
                     {/* Avatars */}
                     <div className="flex items-start -space-x-3 -ml-0.5 mb-4 -mt-5">
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar06}
                         width={36}
                         height={36}
                         alt="Avatar 06"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar05}
                         width={36}
                         height={36}
                         alt="Avatar 05"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar08}
                         width={36}
                         height={36}
                         alt="Avatar 08"
                       />
                       <Image 
-                        className="rounded-full border-2 border-gray-900 box-content"
+                        className="rounded-full border-2 border-[#141519] box-content"
                         src={Avatar07}
                         width={36}
                         height={36}
@@ -497,7 +497,7 @@ export default function Carousel() {
           {/* Carousel Navigation */}
           <div className="flex mt-12 space-x-4 justify-end">
             <button className="carousel-prev w-14 h-14 rounded-full flex items-center justify-center 
-                             bg-gray-800 hover:bg-blue-500 transition-colors">
+                             bg-[#141519] hover:bg-blue-500 transition-colors border border-gray-800">
               <span className="sr-only">Previous</span>
               <svg className="w-4 h-4 fill-gray-400 group-hover:fill-white transition-colors" 
                    viewBox="0 0 16 16">
@@ -505,7 +505,7 @@ export default function Carousel() {
               </svg>
             </button>
             <button className="carousel-next w-14 h-14 rounded-full flex items-center justify-center 
-                             bg-gray-800 hover:bg-blue-500 transition-colors">
+                             bg-[#141519] hover:bg-blue-500 transition-colors border border-gray-800">
               <span className="sr-only">Next</span>
               <svg className="w-4 h-4 fill-gray-400 group-hover:fill-white transition-colors" 
                    viewBox="0 0 16 16">
