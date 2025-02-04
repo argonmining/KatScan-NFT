@@ -100,7 +100,7 @@ export default function MaintenancePage() {
                        border border-gray-700/50 hover:border-blue-500/50"
             >
               <div className="flex items-center justify-between">
-                <span className="text-white font-medium">Kacho Kats Rarity Search</span>
+                <span className="text-white font-medium">Nacho Kats NFT Rarity Search</span>
                 <svg 
                   className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors" 
                   fill="none" 
