@@ -1,5 +1,6 @@
 import './css/style.css'
 import './globals.css'
+import '@/styles/custom-animations.css'
 
 import { Inter } from 'next/font/google'
 import localFont from 'next/font/local'
