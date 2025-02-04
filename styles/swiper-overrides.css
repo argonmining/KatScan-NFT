@@ -1,0 +1,16 @@
+.swiper-container {
+  background: transparent !important;
+}
+
+.swiper-slide {
+  background: transparent !important;
+}
+
+.carousel {
+  background: transparent !important;
+}
+
+/* Override any other Swiper background styles */
+.swiper-wrapper {
+  background: transparent !important;
+} 

@@ -32,6 +32,7 @@ import Avatar18 from '@/public/images/carousel-avatar-18.jpg'
 // Import Swiper
 import Swiper, { Navigation } from 'swiper'
 import 'swiper/swiper.min.css'
+import '@/styles/swiper-overrides.css'
 Swiper.use([Navigation])
 
 export default function Carousel() {
