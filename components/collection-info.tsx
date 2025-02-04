@@ -52,9 +52,9 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
 
   // Add placeholder image component
   const PlaceholderImage = () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl">
+    <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-xl">
       <div className="text-center p-6">
-        <div className="w-20 h-20 mx-auto mb-4 text-gray-400">
+        <div className="w-20 h-20 mx-auto mb-4 text-gray-600">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
@@ -67,11 +67,11 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
   );
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 mb-8">
+    <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6 mb-8">
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Column - Image and Video */}
         <div className="w-full md:w-1/3">
-          <div className="relative w-full pt-[100%] rounded-xl overflow-hidden bg-gray-50 image-container">
+          <div className="relative w-full pt-[100%] rounded-xl overflow-hidden bg-gray-800 image-container">
             {metadata?.image ? (
               <>
                 <Image
@@ -120,21 +120,21 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
           <div className="flex justify-between items-start gap-4 mb-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900 truncate">
+                <h1 className="text-2xl font-bold text-white truncate">
                   {metadata?.name || `${collection.tick} Collection`}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                <span className="px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-800 text-gray-300">
                   {collection.tick}
                 </span>
               </div>
-              <p className="text-gray-600 line-clamp-2">
+              <p className="text-gray-400 line-clamp-2">
                 {metadata?.description || `A collection of ${collection.max} NFTs`}
               </p>
             </div>
             <span className={`shrink-0 px-3 py-1 rounded-full text-sm font-medium ${
               collection.state === 'deployed' 
-                ? 'bg-green-100 text-green-800'
-                : 'bg-yellow-100 text-yellow-800'
+                ? 'bg-green-900/50 text-green-400'
+                : 'bg-yellow-900/50 text-yellow-400'
             }`}>
               {collection.state}
             </span>
@@ -143,14 +143,14 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-900">Minting Progress</span>
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-sm font-medium text-white">Minting Progress</span>
+              <span className="text-sm font-medium text-gray-400">
                 {mintedCount.toLocaleString()} / {totalSupply.toLocaleString()} ({progress.toFixed(1)}%)
               </span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
+            <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
               <div 
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                className="h-full bg-blue-500 rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -158,44 +158,32 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
 
           {/* Add Market Stats after the progress bar */}
           {marketData && (
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Market Statistics</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* Floor Price */}
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <div className="text-sm font-medium text-blue-600 mb-1">Floor Price</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {marketData.floor_price.toLocaleString()} KAS
-                  </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="text-sm text-gray-400 mb-1">Floor Price</div>
+                <div className="text-lg font-semibold text-white">
+                  {marketData.floor_price.toLocaleString()} KAS
                 </div>
-
-                {/* 24h Volume */}
-                <div className="bg-purple-50 rounded-xl p-4">
-                  <div className="text-sm font-medium text-purple-600 mb-1">24h Volume</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {marketData.volume_24h.toLocaleString()} KAS
-                  </div>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="text-sm text-gray-400 mb-1">24h Volume</div>
+                <div className="text-lg font-semibold text-white">
+                  {marketData.volume_24h.toLocaleString()} KAS
                 </div>
-
-                {/* Total Volume */}
-                <div className="bg-green-50 rounded-xl p-4">
-                  <div className="text-sm font-medium text-green-600 mb-1">Total Volume</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {marketData.total_volume.toLocaleString()} KAS
-                  </div>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="text-sm text-gray-400 mb-1">Total Volume</div>
+                <div className="text-lg font-semibold text-white">
+                  {marketData.total_volume.toLocaleString()} KAS
                 </div>
-
-                {/* 24h Change */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="text-sm font-medium text-gray-600 mb-1">24h Change</div>
-                  <div className={`text-xl font-bold flex items-center gap-1 ${
-                    marketData.change_24h > 0 ? 'text-green-600' : 
-                    marketData.change_24h < 0 ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {marketData.change_24h > 0 ? <TrendingUp className="w-5 h-5" /> : 
-                     marketData.change_24h < 0 ? <TrendingDown className="w-5 h-5" /> : null}
-                    {marketData.change_24h.toFixed(2)}%
-                  </div>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="text-sm text-gray-400 mb-1">24h Change</div>
+                <div className={`text-lg font-semibold flex items-center gap-1 ${
+                  marketData.change_24h >= 0 ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {marketData.change_24h >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                  {Math.abs(marketData.change_24h)}%
                 </div>
               </div>
             </div>
@@ -203,17 +191,17 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-sm font-medium text-gray-500 mb-1">Mint Cost</div>
-              <div className="text-xl font-bold text-gray-900">
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="text-sm text-gray-400 mb-1">Mint Cost</div>
+              <div className="text-lg font-semibold text-white">
                 {collection.royaltyFee 
                   ? `${(parseInt(collection.royaltyFee) / 100000000).toFixed(0)} KAS`
                   : 'Free'}
               </div>
             </div>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-sm font-medium text-gray-500 mb-1">Pre-Minted</div>
-              <div className="text-xl font-bold text-gray-900">
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="text-sm text-gray-400 mb-1">Pre-Minted</div>
+              <div className="text-lg font-semibold text-white">
                 {parseInt(collection.premint || '0') > 0 
                   ? collection.premint 
                   : 'Fair Launch'}
@@ -224,19 +212,19 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
           {/* Royalty Recipient */}
           {collection.royaltyTo && (
             <div className="mb-8">
-              <div className="text-sm font-medium text-gray-500 mb-2">Royalty Recipient</div>
-              <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-4">
+              <div className="text-sm text-gray-400 mb-2">Royalty Recipient</div>
+              <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg p-4">
                 <a 
                   href={`https://kas.fyi/address/${collection.royaltyTo}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono text-sm text-gray-600 hover:text-blue-600 break-all transition-colors"
+                  className="font-mono text-sm text-gray-400 hover:text-blue-400 break-all transition-colors"
                 >
                   {collection.royaltyTo}
                 </a>
                 <button 
                   onClick={() => collection.royaltyTo && navigator.clipboard.writeText(collection.royaltyTo)}
-                  className="shrink-0 text-blue-500 hover:text-blue-600 transition-colors"
+                  className="shrink-0 text-blue-400 hover:text-blue-500 transition-colors"
                   title="Copy address"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,7 +248,7 @@ export default function CollectionInfo({ collection }: CollectionInfoProps) {
                     href={value}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-gray-900 transition-colors duration-200"
+                    className="text-gray-400 hover:text-gray-500 transition-colors duration-200"
                   >
                     {getSocialIcon(key)}
                   </a>

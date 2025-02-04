@@ -188,14 +188,14 @@ export default function Home() {
   }, []);
 
   return (
-    <>
-      <Hero 
-        onSearchAction={handleSearch}
+    <div className="min-h-screen bg-gray-950">
+      <Hero
         isLoading={isLoading}
         searchType={searchType}
         searchValue={searchValue}
         onSearchValueChangeAction={setSearchValue}
         onSearchTypeChangeAction={handleSearchTypeChange}
+        onSearchAction={handleSearch}
       />
       <Inspiration
         nfts={searchType === 'collection' ? collectionData.nfts : addressData.nfts}
@@ -211,6 +211,6 @@ export default function Home() {
       />
       {/* <Carousel /> */}
       {/* <Faqs /> */}
-    </>
+    </div>
   )
 }
