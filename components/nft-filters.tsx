@@ -6,15 +6,15 @@ import { NFTDisplay, TraitFilter, FilterState } from '@/types/nft'
 interface NFTFiltersProps {
     nfts: NFTDisplay[];
     selectedFilters: FilterState;
-    onFilterToggle: (trait_type: string, value: string) => void;
-    onReset: () => void;
+    onFilterToggleAction: (trait_type: string, value: string) => void;
+    onResetAction: () => void;
 }
 
 export default function NFTFilters({ 
     nfts, 
     selectedFilters, 
-    onFilterToggle, 
-    onReset 
+    onFilterToggleAction, 
+    onResetAction 
 }: NFTFiltersProps) {
     const availableTraits = useMemo(() => {
         const traits: { trait_type: string; values: Set<string> }[] = [];
@@ -39,45 +39,47 @@ export default function NFTFilters({
     if (availableTraits.length === 0) return null;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 bg-[#141519] p-4 rounded-lg border border-gray-800">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Filters</h3>
+                <h3 className="text-lg font-semibold text-white">Filters</h3>
                 {Object.keys(selectedFilters).length > 0 && (
                     <button 
-                        onClick={onReset}
-                        className="text-sm text-blue-500 hover:text-blue-600"
+                        onClick={onResetAction}
+                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                     >
                         Reset All
                     </button>
                 )}
             </div>
-            {availableTraits.map(({ trait_type, values }) => (
-                <div key={trait_type} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <h4 className="font-medium text-gray-700">{trait_type}</h4>
-                        {selectedFilters[trait_type] && (
-                            <span className="text-xs text-gray-500">
-                                {selectedFilters[trait_type].size} selected
-                            </span>
-                        )}
+            <div className="space-y-4">
+                {availableTraits.map(({ trait_type, values }) => (
+                    <div key={trait_type} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <h4 className="font-medium text-gray-300">{trait_type}</h4>
+                            {selectedFilters[trait_type] && (
+                                <span className="text-xs text-gray-500">
+                                    {selectedFilters[trait_type].size} selected
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {Array.from(values).map(value => (
+                                <button
+                                    key={value}
+                                    onClick={() => onFilterToggleAction(trait_type, value)}
+                                    className={`px-3 py-1 rounded-full text-sm ${
+                                        selectedFilters[trait_type]?.has(value)
+                                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                    } transition-colors`}
+                                >
+                                    {value}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {Array.from(values).map(value => (
-                            <button
-                                key={value}
-                                onClick={() => onFilterToggle(trait_type, value)}
-                                className={`px-3 py-1 rounded-full text-sm ${
-                                    selectedFilters[trait_type]?.has(value)
-                                        ? 'bg-blue-500 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200'
-                                }`}
-                            >
-                                {value}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 } 

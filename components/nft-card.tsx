@@ -1,17 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { NFTDisplay } from '@/types/nft'
 import NFTModal from './nft-modal'
+import NFTCardSkeleton from './nft-card-skeleton'
 
 interface NFTCardProps {
     nft: NFTDisplay;
+    loadMetadata?: boolean;
 }
 
-export default function NFTCard({ nft }: NFTCardProps) {
+export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [imageHeight, setImageHeight] = useState<number>(0);
+    const [metadata, setMetadata] = useState(nft.metadata);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleCloseAction = async () => {
         setIsModalOpen(false);
@@ -23,6 +27,34 @@ export default function NFTCard({ nft }: NFTCardProps) {
         const aspectRatio = (img.naturalHeight / img.naturalWidth) * 100;
         setImageHeight(aspectRatio);
     };
+
+    useEffect(() => {
+        async function loadNFTData() {
+            if (!loadMetadata || metadata) return;
+            
+            setIsLoading(true);
+            try {
+                // Only load metadata when card becomes visible
+                const metadataResponse = await fetch(`/api/ipfs/${nft.tick}/${nft.id}`);
+
+                if (metadataResponse.ok) {
+                    const newMetadata = await metadataResponse.json();
+                    setMetadata(newMetadata);
+                }
+            } catch (error) {
+                console.error('Error loading NFT metadata:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        loadNFTData();
+    }, [loadMetadata, metadata, nft.id, nft.tick]);
+
+    // Show loading skeleton while fetching data
+    if (isLoading) {
+        return <NFTCardSkeleton />;
+    }
 
     return (
         <>
@@ -37,7 +69,7 @@ export default function NFTCard({ nft }: NFTCardProps) {
                         {nft.metadata.imageUrl && (
                             <div className="relative w-full h-full group">
                                 {/* Decorative frame */}
-                                <div className="absolute inset-0 rounded-lg border-4 border-gray-100 shadow-lg bg-white">
+                                <div className="absolute inset-0 rounded-lg border-4 border-gray-800 shadow-lg bg-gray-900">
                                     <div className="relative w-full h-full flex items-center justify-center">
                                         <img
                                             src={nft.metadata.imageUrl}
@@ -58,7 +90,7 @@ export default function NFTCard({ nft }: NFTCardProps) {
                                 </div>
 
                                 {/* Title overlay */}
-                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-lg">
+                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent rounded-b-lg">
                                     <h3 className="text-white font-semibold truncate">
                                         {nft.metadata.name}
                                     </h3>

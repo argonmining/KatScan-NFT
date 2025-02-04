@@ -200,90 +200,119 @@ export default function Inspiration({
     }
   }, [isIntersecting, hasMore, isLoadingMore, debouncedLoadMore, nfts.length]);
 
+  // Add new intersection observer for NFT cards
+  const [visibleNFTs, setVisibleNFTs] = useState(new Set<string>());
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const nftId = entry.target.getAttribute('data-nft-id');
+            if (nftId) {
+              setVisibleNFTs(prev => new Set(prev).add(nftId));
+            }
+          }
+        });
+      },
+      {
+        rootMargin: '50px',
+        threshold: 0.1
+      }
+    );
+
+    // Observe all NFT cards
+    document.querySelectorAll('[data-nft-id]').forEach(card => {
+      observer.observe(card);
+    });
+
+    return () => observer.disconnect();
+  }, [nfts]); // Reset when NFTs change
+
   console.log('Inspiration collection prop:', collection);
 
   return (
     <div className="relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="pt-8 md:pt-12">
-          {/* Only show Address Info after search is executed */}
-          {searchType === 'address' && hasSearched && (
-            <AddressInfo
-              address={searchValue}
-              totalNFTs={nfts.length}
-              collections={Array.from(new Set(nfts.map(nft => nft.tick)))}
-            />
-          )}
+        <div className="bg-[#0a0b0f] min-h-screen">
+          <div className="pt-8 md:pt-12">
+            {/* Only show Address Info after search is executed */}
+            {searchType === 'address' && hasSearched && (
+              <AddressInfo
+                address={searchValue}
+                totalNFTs={nfts.length}
+                collections={Array.from(new Set(nfts.map(nft => nft.tick)))}
+              />
+            )}
 
-          {/* Show Collection Info for collection searches */}
-          {searchType === 'collection' && collection && (
-            <CollectionInfo collection={collection} />
-          )}
+            {/* Show Collection Info for collection searches */}
+            {searchType === 'collection' && collection && (
+              <CollectionInfo collection={collection} />
+            )}
 
-          {/* Filter Dropdowns */}
-          {!isLoading && nfts.length > 0 && (
-            <div className="mb-8">
-              {searchType === 'address' ? (
-                <CollectionFilter
-                  collections={Array.from(new Set(nfts.map(nft => nft.tick))).map(tick => ({
-                    tick,
-                    count: nfts.filter(nft => nft.tick === tick).length
-                  }))}
-                  selectedCollections={filters['collection'] || new Set()}
-                  onChange={(selected) => {
-                    const newFilters = { ...filters };
-                    if (selected.size > 0) {
-                      newFilters['collection'] = selected;
-                    } else {
-                      delete newFilters['collection'];
-                    }
-                    setFilters(newFilters);
-                  }}
-                />
-              ) : (
-                // Trait filters for collection search
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Object.entries(filterOptions).map(([trait_type, options]) => (
-                    <div key={trait_type}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {trait_type}
-                      </label>
-                      <Select<FilterOption, true>
-                        isMulti
-                        options={options}
-                        value={options.filter(option => 
-                          filters[trait_type]?.has(option.value)
-                        )}
-                        onChange={(selected: MultiValue<FilterOption>) => 
-                          handleFilterChange(trait_type, selected)
-                        }
-                        className="basic-multi-select"
-                        classNamePrefix="select"
-                        placeholder={`Select ${trait_type}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Main Content */}
-          <div className="w-full">
-            {isLoading && (
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                <p className="mt-4">Loading NFTs...</p>
+            {/* Filter Dropdowns */}
+            {!isLoading && nfts.length > 0 && (
+              <div className="mb-8">
+                {searchType === 'address' ? (
+                  <CollectionFilter
+                    collections={Array.from(new Set(nfts.map(nft => nft.tick))).map(tick => ({
+                      tick,
+                      count: nfts.filter(nft => nft.tick === tick).length
+                    }))}
+                    selectedCollections={filters['collection'] || new Set()}
+                    onChange={(selected) => {
+                      const newFilters = { ...filters };
+                      if (selected.size > 0) {
+                        newFilters['collection'] = selected;
+                      } else {
+                        delete newFilters['collection'];
+                      }
+                      setFilters(newFilters);
+                    }}
+                  />
+                ) : (
+                  // Trait filters for collection search
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(filterOptions).map(([trait_type, options]) => (
+                      <div key={trait_type}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {trait_type}
+                        </label>
+                        <Select<FilterOption, true>
+                          isMulti
+                          options={options}
+                          value={options.filter(option => 
+                            filters[trait_type]?.has(option.value)
+                          )}
+                          onChange={(selected: MultiValue<FilterOption>) => 
+                            handleFilterChange(trait_type, selected)
+                          }
+                          className="basic-multi-select"
+                          classNamePrefix="select"
+                          placeholder={`Select ${trait_type}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {error && (
-              <div className="text-center py-12">
-                <div className="max-w-md mx-auto">
-                  <div className="bg-red-50 border border-red-100 rounded-lg p-6">
-                    <div className="flex items-center justify-center mb-4">
+            {/* Main Content */}
+            <div className="w-full">
+              {isLoading && (
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  <p className="mt-4">Loading NFTs...</p>
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-lg bg-red-900/20 border border-red-800 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-red-400">
                       <svg 
-                        className="w-8 h-8 text-red-400" 
+                        className="w-8 h-8" 
                         fill="none" 
                         stroke="currentColor" 
                         viewBox="0 0 24 24"
@@ -296,66 +325,58 @@ export default function Inspiration({
                         />
                       </svg>
                     </div>
-                    <h3 className="text-lg font-medium text-red-800 mb-2">
+                    <h3 className="text-lg font-medium text-red-400 mb-2">
                       {searchType === 'collection' ? 'Collection Not Found' : 'Address Not Found'}
                     </h3>
-                    <p className="text-red-600">
-                      {error}
-                    </p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="mt-4 text-sm text-red-600 hover:text-red-800 underline"
-                    >
-                      Try another search
-                    </button>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* No NFTs message */}
-            {!isLoading && !error && nfts.length === 0 && hasSearched && (
-              <div className="text-center text-gray-500">
-                No NFTs found for this {searchType}
-              </div>
-            )}
-
-            {/* NFT Grid */}
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-4 lg:grid-cols-4">
-              {filteredNFTs.map((nft) => (
-                <div 
-                  key={`${nft.tick}-${nft.id}`} 
-                  className="relative w-full h-fit"
-                >
-                  <NFTCard nft={nft} />
+              {/* No NFTs message */}
+              {!isLoading && !error && nfts.length === 0 && hasSearched && (
+                <div className="text-center text-gray-400">
+                  No NFTs found for this {searchType}
                 </div>
-              ))}
+              )}
+
+              {/* NFT Grid */}
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-4 lg:grid-cols-4">
+                {filteredNFTs.map((nft) => (
+                  <div 
+                    key={`${nft.tick}-${nft.id}`}
+                    data-nft-id={`${nft.tick}-${nft.id}`}
+                    className="relative w-full h-fit"
+                  >
+                    <NFTCard 
+                      nft={nft} 
+                      loadMetadata={visibleNFTs.has(`${nft.tick}-${nft.id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Loading indicator at bottom - Updated positioning */}
+              {hasMore && (
+                <div ref={observerTarget} className="h-20 mt-8" />
+              )}
+              {isLoadingMore && (
+                <div className="mt-8 mb-4 flex justify-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+                </div>
+              )}
+              {!hasMore && nfts.length > 0 && (
+                <div className="mt-8 text-center text-gray-400">
+                  End of collection
+                </div>
+              )}
+
+              {/* No Results */}
+              {filteredNFTs.length === 0 && nfts.length > 0 && (
+                <div className="text-center text-gray-500">
+                  No NFTs match the selected filters
+                </div>
+              )}
             </div>
-
-            {/* Loading indicator at bottom - Updated positioning */}
-            {hasMore && (
-              <div 
-                ref={observerTarget} 
-                className="h-20 mt-8" // Increased height for better detection
-              />
-            )}
-            {isLoadingMore && (
-              <div className="mt-8 mb-4 flex justify-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-              </div>
-            )}
-            {!hasMore && nfts.length > 0 && (
-              <div className="mt-8 text-center text-gray-500">
-                End of collection
-              </div>
-            )}
-
-            {/* No Results */}
-            {filteredNFTs.length === 0 && nfts.length > 0 && (
-              <div className="text-center text-gray-500">
-                No NFTs match the selected filters
-              </div>
-            )}
           </div>
         </div>
       </div>

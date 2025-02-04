@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NFTDisplay } from '@/types/nft'
 import { XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 
@@ -12,6 +12,53 @@ interface NFTModalProps {
 
 export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) {
     const [showTraits, setShowTraits] = useState(false);
+    const [ownerStatus, setOwnerStatus] = useState<string | null>(null);
+    const [isLoadingOwner, setIsLoadingOwner] = useState(false);
+    const [owners, setOwners] = useState<string[]>([]);
+    const [isLoadingOwners, setIsLoadingOwners] = useState(false);
+
+    // Load owner information when modal opens
+    useEffect(() => {
+        async function loadOwnerData() {
+            if (!isOpen || ownerStatus) return;
+            
+            setIsLoadingOwner(true);
+            try {
+                const ownerResponse = await fetch(`/api/krc721/nfts/${nft.tick}/token/${nft.id}`);
+                if (ownerResponse.ok) {
+                    const ownerData = await ownerResponse.json();
+                    setOwnerStatus(ownerData.result?.owner || null);
+                }
+            } catch (error) {
+                console.error('Failed to load owner data:', error);
+            } finally {
+                setIsLoadingOwner(false);
+            }
+        }
+
+        loadOwnerData();
+    }, [isOpen, nft.id, nft.tick, ownerStatus]);
+
+    useEffect(() => {
+        async function fetchOwners() {
+            if (!isOpen) return; // Only fetch when modal is opened
+            
+            setIsLoadingOwners(true);
+            try {
+                const response = await fetch(`/api/nft/${nft.tick}/${nft.id}/owners`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setOwners(data.owners);
+                }
+            } catch (error) {
+                console.error('Error fetching owners:', error);
+            } finally {
+                setIsLoadingOwners(false);
+            }
+        }
+
+        fetchOwners();
+    }, [isOpen, nft.tick, nft.id]); // Only re-fetch when modal opens or NFT changes
 
     const handleClose = async () => {
         await onCloseAction();
@@ -26,8 +73,8 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                 className="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity"
                 onClick={handleClose}
             />
-
-            {/* Modal */}
+            
+            {/* Modal content */}
             <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
                 <div className="relative w-full max-w-3xl">
                     <div className="relative bg-[#1a1b23]/95 backdrop-blur-md rounded-2xl shadow-2xl">
@@ -160,6 +207,44 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                 </div>
                             </div>
                         </div>
+
+                        {/* Update owner display section */}
+                        <div className="mt-4">
+                            <h4 className="text-sm font-medium text-gray-500">Owner</h4>
+                            <div className="mt-1">
+                                {isLoadingOwner ? (
+                                    <div className="animate-pulse h-6 bg-gray-200 rounded w-48" />
+                                ) : ownerStatus ? (
+                                    <a
+                                        href={`https://kas.fyi/address/${ownerStatus}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-500 hover:text-blue-600 break-all"
+                                    >
+                                        {ownerStatus}
+                                    </a>
+                                ) : (
+                                    <span className="text-gray-500">Not available</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {isLoadingOwners ? (
+                            <div className="flex justify-center p-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                            </div>
+                        ) : (
+                            <div className="mt-4">
+                                <h3 className="text-lg font-medium text-white mb-2">Owners</h3>
+                                <div className="space-y-2">
+                                    {owners.map((owner, index) => (
+                                        <div key={index} className="text-gray-400 text-sm">
+                                            {owner}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
