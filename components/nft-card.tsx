@@ -42,14 +42,14 @@ export default function NFTCard({ nft, loadMetadata = false }: NFTCardProps) {
                     setMetadata(newMetadata);
                 }
             } catch (error) {
-                console.error('Failed to load NFT metadata:', error);
+                console.error('Error loading NFT metadata:', error);
             } finally {
                 setIsLoading(false);
             }
         }
 
         loadNFTData();
-    }, [loadMetadata, nft.id, nft.tick, metadata]);
+    }, [loadMetadata, metadata, nft.id, nft.tick]);
 
     // Show loading skeleton while fetching data
     if (isLoading) {

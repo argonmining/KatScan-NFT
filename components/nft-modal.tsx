@@ -14,6 +14,8 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
     const [showTraits, setShowTraits] = useState(false);
     const [ownerStatus, setOwnerStatus] = useState<string | null>(null);
     const [isLoadingOwner, setIsLoadingOwner] = useState(false);
+    const [owners, setOwners] = useState<string[]>([]);
+    const [isLoadingOwners, setIsLoadingOwners] = useState(false);
 
     // Load owner information when modal opens
     useEffect(() => {
@@ -37,6 +39,27 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
         loadOwnerData();
     }, [isOpen, nft.id, nft.tick, ownerStatus]);
 
+    useEffect(() => {
+        async function fetchOwners() {
+            if (!isOpen) return; // Only fetch when modal is opened
+            
+            setIsLoadingOwners(true);
+            try {
+                const response = await fetch(`/api/nft/${nft.tick}/${nft.id}/owners`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setOwners(data.owners);
+                }
+            } catch (error) {
+                console.error('Error fetching owners:', error);
+            } finally {
+                setIsLoadingOwners(false);
+            }
+        }
+
+        fetchOwners();
+    }, [isOpen, nft.tick, nft.id]); // Only re-fetch when modal opens or NFT changes
+
     const handleClose = async () => {
         await onCloseAction();
     };
@@ -50,8 +73,8 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                 className="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity"
                 onClick={handleClose}
             />
-
-            {/* Modal */}
+            
+            {/* Modal content */}
             <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
                 <div className="relative w-full max-w-3xl">
                     <div className="relative bg-[#1a1b23]/95 backdrop-blur-md rounded-2xl shadow-2xl">
@@ -205,6 +228,23 @@ export default function NFTModal({ nft, isOpen, onCloseAction }: NFTModalProps) 
                                 )}
                             </div>
                         </div>
+
+                        {isLoadingOwners ? (
+                            <div className="flex justify-center p-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                            </div>
+                        ) : (
+                            <div className="mt-4">
+                                <h3 className="text-lg font-medium text-white mb-2">Owners</h3>
+                                <div className="space-y-2">
+                                    {owners.map((owner, index) => (
+                                        <div key={index} className="text-gray-400 text-sm">
+                                            {owner}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
